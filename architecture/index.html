@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'">
+
+  <title>SleepEdit Architecture and Workflow Diagrams</title>
+  <style>
+  :root { color-scheme:light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --soft:#eef4fb; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--page); color:var(--ink); font:16px/1.55 "Segoe UI",Arial,sans-serif; }
+  a { color:var(--blue); font-weight:650; }
+  main { width:min(1500px,calc(100% - 32px)); margin:28px auto 64px; }
+  .hero,.diagram-card { background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 4px 16px rgba(2,15,89,.06); }
+  .hero { padding:30px; border-top:7px solid var(--blue); }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.78rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+  h1,h2,h3 { color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; }
+  h1 { margin:0; font-size:clamp(2.1rem,4vw,3.4rem); line-height:1.08; }
+  h2 { margin:38px 4px 14px; font-size:1.8rem; }
+  h3 { margin:0; font-size:1.55rem; }
+  .lede { max-width:900px; margin:14px 0 0; color:var(--muted); font-size:1.08rem; }
+  .sequence { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin:24px 0 0; padding:0; list-style:none; counter-reset:diagram; }
+  .sequence li { counter-increment:diagram; }
+  .sequence a { display:flex; min-height:66px; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f9fc; text-decoration:none; }
+  .sequence a::before { content:counter(diagram); display:grid; flex:0 0 30px; width:30px; height:30px; place-items:center; border-radius:50%; background:var(--navy); color:#fff; font-size:.82rem; }
+  .sequence a:hover,.sequence a:focus-visible { border-color:var(--blue); background:var(--soft); }
+  .chapter-intro { max-width:900px; margin:-8px 4px 16px; color:var(--muted); }
+  .diagram-card { margin:0 0 24px; overflow:hidden; scroll-margin-top:18px; }
+  .diagram-header { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:start; padding:22px 24px; border-bottom:1px solid var(--line); }
+  .diagram-number { display:grid; width:38px; height:38px; place-items:center; border-radius:50%; background:var(--navy); color:#fff; font-weight:750; }
+  .diagram-summary { margin:5px 0 0; color:var(--muted); }
+  .full-size { white-space:nowrap; }
+  figure { margin:0; }
+  .diagram-stage { overflow:auto; background:#fff; }
+  .diagram-stage img { display:block; width:100%; min-width:1000px; height:auto; }
+  figcaption { padding:12px 24px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem; }
+  footer { padding:26px 4px; color:var(--muted); text-align:center; }
+  @media (max-width:700px) {
+    main { width:min(100% - 16px,1500px); margin-top:8px; }
+    .hero { padding:22px; }
+    .diagram-header { grid-template-columns:auto 1fr; padding:18px; }
+    .full-size { grid-column:2; }
+    .diagram-stage img { min-width:900px; }
+    figcaption { padding-inline:18px; }
+  }
+  @media print {
+    body { background:#fff; }
+    main { width:100%; margin:0; }
+    .hero,.diagram-card { box-shadow:none; }
+    .diagram-card { break-before:page; }
+    .diagram-stage { overflow:visible; }
+    .diagram-stage img { min-width:0; }
+  }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="eyebrow">Source-verified system documentation</p>
+    <h1>SleepEdit Architecture and Workflows</h1>
+    <p class="lede">Read the diagrams in sequence: begin with the system boundary, follow the clinician-facing workflows, review the AI privacy boundary, then move through administration and desktop deployment.</p>
+    <ol class="sequence" aria-label="Diagram sequence">
+      <li><a href="#system-architecture">System architecture</a></li>
+      <li><a href="#sleep-note-authoring">Sleep-note authoring</a></li>
+      <li><a href="#medication-tool">Medication tool</a></li>
+      <li><a href="#protocol-viewer">Protocol viewer</a></li>
+      <li><a href="#ai-assistant">AI assistant</a></li>
+      <li><a href="#protocol-administration">Protocol administration</a></li>
+      <li><a href="#administration-settings">Shared settings</a></li>
+      <li><a href="#desktop-setup">Desktop setup</a></li>
+    </ol>
+  </header>
+
+  <h2>Foundation</h2>
+  <p class="chapter-intro">Start with the hosts, shared application, persistence boundaries, and optional integrations that frame every detailed workflow below.</p>
+  <article class="diagram-card" id="system-architecture">
+    <header class="diagram-header">
+      <span class="diagram-number">1</span>
+      <div><h3>System architecture overview</h3><p class="diagram-summary">Web and Windows hosts reuse the same shared UI and application services while supplying host-specific adapters.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-system-architecture.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-system-architecture.svg" alt="SleepEdit system architecture sequence diagram" fetchpriority="high"></div><figcaption>Application entry, core clinical services, external integrations, storage, and administration boundaries.</figcaption></figure>
+  </article>
+
+  <h2>Clinician workflows</h2>
+  <p class="chapter-intro">These flows show how clinicians author notes, add catalog-backed medication narratives, and use published protocols.</p>
+  <article class="diagram-card" id="sleep-note-authoring">
+    <header class="diagram-header">
+      <span class="diagram-number">2</span>
+      <div><h3>Sleep-note authoring</h3><p class="diagram-summary">Structured findings are validated, converted into a reviewable narrative, and inserted only after an explicit user action.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-sleep-note-authoring.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-sleep-note-authoring.svg" alt="Sleep-note authoring sequence diagram" loading="lazy"></div><figcaption>Form validation, narrative generation, local dictation, configuration, editing, and printing.</figcaption></figure>
+  </article>
+
+  <article class="diagram-card" id="medication-tool">
+    <header class="diagram-header">
+      <span class="diagram-number">3</span>
+      <div><h3>Medication selection and drug information</h3><p class="diagram-summary">Medication names must resolve to catalog entries before becoming part of the clinical narrative.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-medication-tool.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-medication-tool.svg" alt="Medication selection and drug information sequence diagram" loading="lazy"></div><figcaption>Catalog search and selection, optional OpenFDA lookup, narrative construction, and insert, replace, or copy behavior.</figcaption></figure>
+  </article>
+
+  <article class="diagram-card" id="protocol-viewer">
+    <header class="diagram-header">
+      <span class="diagram-number">4</span>
+      <div><h3>Protocol viewer and checklist</h3><p class="diagram-summary">The viewer resolves the best available protocol source, tracks selections, and produces reviewed output.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-protocol-viewer.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-protocol-viewer.svg" alt="Protocol viewer and checklist sequence diagram" loading="lazy"></div><figcaption>Host-supplied, saved, shared, cached, local, and embedded protocol resolution followed by checklist composition.</figcaption></figure>
+  </article>
+
+  <h2>Safe assistance</h2>
+  <p class="chapter-intro">The AI flow is shown separately because its privacy gates and review-only behavior apply across the authoring surfaces.</p>
+  <article class="diagram-card" id="ai-assistant">
+    <header class="diagram-header">
+      <span class="diagram-number">5</span>
+      <div><h3>AI assistant privacy and review</h3><p class="diagram-summary">Local PHI screening and image redaction occur before provider calls, and proposed changes are never applied automatically.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-ai-assistant.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-ai-assistant.svg" alt="AI assistant privacy and review sequence diagram" loading="lazy"></div><figcaption>Distinct sleep-note and protocol-assistant paths, minimized provider requests, schema validation, and explicit stale-safe application.</figcaption></figure>
+  </article>
+
+  <h2>Governance and configuration</h2>
+  <p class="chapter-intro">Administration flows explain how durable drafts, published content, shared configuration, and local state are managed.</p>
+  <article class="diagram-card" id="protocol-administration">
+    <header class="diagram-header">
+      <span class="diagram-number">6</span>
+      <div><h3>Protocol administration and publishing</h3><p class="diagram-summary">Authenticated managers create and edit protocol drafts, use undo and import/export, and publish shared content.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-protocol-administration.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-protocol-administration.svg" alt="Protocol administration and publishing sequence diagram" loading="lazy"></div><figcaption>Credential gating, protocol selection, editor sessions, command validation, durable drafts, and publication ordering.</figcaption></figure>
+  </article>
+
+  <article class="diagram-card" id="administration-settings">
+    <header class="diagram-header">
+      <span class="diagram-number">7</span>
+      <div><h3>Administration and shared settings</h3><p class="diagram-summary">Medication catalogs, themes, and AI policy have distinct validation, persistence, and publication behavior.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-administration-settings.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-administration-settings.svg" alt="Administration and shared settings sequence diagram" loading="lazy"></div><figcaption>Admin unlock, catalog maintenance, theme publication and live update, and installation-wide AI policy.</figcaption></figure>
+  </article>
+
+  <h2>Desktop deployment</h2>
+  <p class="chapter-intro">Finish with the machine-level setup that establishes shared content, local secrets, initial policy, and normal desktop startup.</p>
+  <article class="diagram-card" id="desktop-setup">
+    <header class="diagram-header">
+      <span class="diagram-number">8</span>
+      <div><h3>Desktop installation and first-run setup</h3><p class="diagram-summary">Elevated setup configures shared content, machine-scoped secrets, initial policy, and optional protocol publication.</p></div>
+      <a class="full-size" href="diagrams/sleepedit-desktop-setup.svg">Open full-size SVG</a>
+    </header>
+    <figure><div class="diagram-stage"><img src="diagrams/sleepedit-desktop-setup.svg" alt="Desktop installation and first-run setup sequence diagram" loading="lazy"></div><figcaption>Setup-mode entry, elevation, validation, non-transactional writes, shared initialization, and relaunch behavior.</figcaption></figure>
+  </article>
+
+  <footer><a href="../index.html">Back to security and quality reports</a></footer>
+</main>
+</body>
+</html>
