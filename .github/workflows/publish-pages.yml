@@ -31,6 +31,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path site -Force | Out-Null
           Copy-Item -LiteralPath index.html -Destination site/index.html
+          if (Test-Path -LiteralPath architecture -PathType Container) {
+            Copy-Item -LiteralPath architecture -Destination site/architecture -Recurse
+          }
           Copy-Item -LiteralPath reports -Destination site/reports -Recurse
           Copy-Item -LiteralPath trend -Destination site/trend -Recurse
 
@@ -70,7 +73,7 @@ jobs:
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        uses: actions/upload-pages-artifact@56afc609b74202658d3ffba0e8f6dda462b719fa
         with:
           path: site
 
