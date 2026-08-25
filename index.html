@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+
+  <title>SleepEdit Security and Quality Reports</title>
+  <style>
+  :root { color-scheme: light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --bad:#b42318; --neutral:#586577; }
+  * { box-sizing:border-box; } body { margin:0; background:var(--page); color:var(--ink); font:16px/1.5 "Segoe UI",Arial,sans-serif; }
+  main { width:min(1040px,calc(100% - 32px)); margin:32px auto 64px; } article { background:var(--surface); border:1px solid var(--line); border-radius:16px; border-top:7px solid var(--bad); box-shadow:0 4px 16px rgba(2,15,89,.06); padding:28px; }
+  h1,h2 { margin:0; color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; } h1 { font-size:clamp(2rem,4vw,3rem); } h2 { margin-top:28px; font-size:1.5rem; }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; } .notice { margin:20px 0; padding:14px 16px; border-left:4px solid var(--bad); background:#fff1f0; }
+  dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; } dl div { padding:12px; background:#f7f9fc; border-radius:10px; } dt { color:var(--muted); font-size:.84rem; } dd { margin:4px 0 0; font-weight:650; overflow-wrap:anywhere; }
+  table { width:100%; border-collapse:collapse; } th,td { border-bottom:1px solid var(--line); padding:10px 12px; text-align:left; } th { color:var(--navy); } code { overflow-wrap:anywhere; } a { color:var(--blue); font-weight:650; }
+  .table-scroll { overflow:auto; border:1px solid var(--line); border-radius:10px; } .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; } .metric { padding:12px; background:#f7f9fc; border-radius:10px; } .metric strong { display:block; color:var(--navy); font-size:1.4rem; } .notice strong { color:var(--navy); }
+  footer { padding:24px 4px; color:var(--muted); text-align:center; } @media (max-width:600px) { main { width:min(100% - 16px,1040px); margin-top:8px; } article { padding:20px; } }
+</style>
+</head>
+<body><main><article>
+  <p class="eyebrow">Public transparency reports</p>
+  <h1>SleepEdit Security and Quality Reports</h1>
+  <p>This site renders detailed scan outcomes for the main branch and active feature branches. It intentionally does not expose raw scanner artifacts, source text, credentials, or private filesystem paths.</p>
+  <p><a href="trend/index.html">Security and quality trend</a></p>
+  <h2>Available reports</h2>
+  <table><thead><tr><th>Branch</th><th>Commit</th><th>Scan state</th></tr></thead><tbody><tr>
+    <td><a href="reports/main/index.html"><code>main</code></a></td>
+    <td><code>16f62e6042807eba33f15f150de07bce4599887d</code></td>
+    <td>complete</td>
+  </tr></tbody></table>
+</article><footer>Reports are regenerated on qualifying pushes. An incomplete scan is displayed explicitly.</footer></main></body>
+</html>
