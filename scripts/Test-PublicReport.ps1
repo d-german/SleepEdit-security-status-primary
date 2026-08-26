@@ -24,6 +24,16 @@ function Assert-ReportHtml {
     if ($content -notmatch 'Content-Security-Policy') {
         throw "$Description is missing its restrictive Content-Security-Policy: $Path"
     }
+    if ($content -match "'unsafe-inline'") {
+        throw "$Description permits unsafe inline content: $Path"
+    }
+    $style = [regex]::Match($content, '(?s)<style>(.*?)</style>').Groups[1].Value.Replace("`r`n", "`n")
+    $declaredHash = [regex]::Match($content, "style-src 'sha256-([^']+)'").Groups[1].Value
+    $actualHash = [Convert]::ToBase64String(
+        [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($style)))
+    if (-not $declaredHash -or $declaredHash -ne $actualHash) {
+        throw "$Description has an invalid inline stylesheet hash: $Path"
+    }
     if ($content -match '(?i)raw evidence|open retained artifact|local path') {
         throw "$Description appears to expose raw scanner evidence: $Path"
     }

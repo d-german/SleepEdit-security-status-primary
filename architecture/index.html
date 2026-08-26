@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'sha256-HNbUaJrJ/RKOmR6RZZ7GIotZNAz5y24GCHvmS4qypXE='">
 
   <title>SleepEdit Architecture and Workflow Diagrams</title>
   <style>
@@ -15,6 +15,7 @@
   main { width:min(1500px,calc(100% - 32px)); margin:28px auto 64px; }
   .hero,.diagram-card { background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 4px 16px rgba(2,15,89,.06); }
   .hero { padding:30px; border-top:7px solid var(--blue); }
+  .site-nav { display:flex; flex-wrap:wrap; gap:8px 20px; margin:0 0 20px; }
   .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.78rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
   h1,h2,h3 { color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; }
   h1 { margin:0; font-size:clamp(2.1rem,4vw,3.4rem); line-height:1.08; }
@@ -58,6 +59,7 @@
 <body>
 <main>
   <header class="hero">
+    <nav class="site-nav" aria-label="Security site"><a href="../index.html">Security &amp; quality reports</a><a href="../it-security-review/index.html">IT &amp; security review</a><a href="index.html" aria-current="page">Architecture &amp; workflows</a><a href="../trend/index.html">Security &amp; quality trend</a></nav>
     <p class="eyebrow">Source-verified system documentation</p>
     <h1>SleepEdit Architecture and Workflows</h1>
     <p class="lede">Read the diagrams in sequence: begin with the system boundary, follow the clinician-facing workflows, review the AI privacy boundary, then move through administration and desktop deployment.</p>
@@ -155,7 +157,7 @@
     <figure><div class="diagram-stage"><img src="diagrams/sleepedit-desktop-setup.svg" alt="Desktop installation and first-run setup sequence diagram" loading="lazy"></div><figcaption>Setup-mode entry, elevation, validation, non-transactional writes, shared initialization, and relaunch behavior.</figcaption></figure>
   </article>
 
-  <footer><a href="../index.html">Back to security and quality reports</a></footer>
+  <footer><a href="../it-security-review/index.html">Read the IT &amp; Security Review Guide</a> · <a href="../index.html">Back to security and quality reports</a></footer>
 </main>
 </body>
 </html>

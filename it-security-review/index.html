@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-pO6JanrFAJ/MAZwhYfGPXxnvQDvpN/sgB1JTlcpepOY='">
+  <title>SleepEdit IT &amp; Security Review Guide</title>
+  <style>
+  :root { color-scheme:light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --soft:#eef4fb; --warning:#8a4b08; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--page); color:var(--ink); font:16px/1.58 "Segoe UI",Arial,sans-serif; }
+  a { color:var(--blue); font-weight:650; }
+  main { width:min(1180px,calc(100% - 32px)); margin:24px auto 64px; }
+  .site-nav { display:flex; flex-wrap:wrap; gap:8px 20px; margin:0 0 16px; padding:14px 18px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+  article { overflow:hidden; padding:34px; border:1px solid var(--line); border-top:7px solid var(--blue); border-radius:16px; background:var(--surface); box-shadow:0 4px 16px rgba(2,15,89,.06); }
+  h1,h2,h3 { color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; line-height:1.2; }
+  h1 { margin:0 0 8px; font-size:clamp(2.05rem,4vw,3.35rem); }
+  h2 { margin:38px 0 12px; padding-top:8px; border-top:1px solid var(--line); font-size:1.55rem; scroll-margin-top:12px; }
+  h3 { margin:18px 0 8px; font-size:1.08rem; }
+  p,li { max-width:92ch; }
+  strong { color:var(--navy); }
+  code { overflow-wrap:anywhere; }
+  pre { overflow:auto; padding:16px; border:1px solid var(--line); border-radius:10px; background:#f7f9fc; white-space:pre-wrap; }
+  table { display:block; width:100%; overflow:auto; border:1px solid var(--line); border-radius:10px; border-collapse:collapse; }
+  thead { background:var(--soft); }
+  th,td { min-width:150px; padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { color:var(--navy); }
+  tr:last-child td { border-bottom:0; }
+  blockquote { margin:18px 0; padding:10px 16px; border-left:4px solid var(--warning); background:#fff8ed; }
+  footer { padding:24px 4px; color:var(--muted); text-align:center; }
+  @media (max-width:680px) { main { width:min(100% - 16px,1180px); margin-top:8px; } article { padding:22px 18px; } .site-nav { padding:12px; } }
+  @media print { body { background:#fff; } main { width:100%; margin:0; } .site-nav { display:none; } article { padding:0; border:0; box-shadow:none; } a { color:inherit; } }
+  </style>
+</head>
+<body>
+<main>
+  <nav class="site-nav" aria-label="Security site">
+    <a href="../index.html">Security &amp; quality reports</a>
+    <a href="index.html" aria-current="page">IT &amp; security review</a>
+    <a href="../architecture/index.html">Architecture &amp; workflows</a>
+    <a href="../trend/index.html">Security &amp; quality trend</a>
+  </nav>
+  <article>
+<h1 id="sleepedit-it-security-review-guide">SleepEdit IT &amp; Security Review Guide</h1>
+<p>Technical, security, privacy, deployment, and data-handling information for healthcare IT reviewers.</p>
+<p><strong>Last reviewed:</strong> August 26, 2026<br>
+<strong>Source baseline:</strong> SleepEdit release-candidate commit <code>446b45a3e86dbf7befedc22209a09f9cf44cba75</code><br>
+<strong>Application version/framework:</strong> The projects target .NET 10. The repository pins .NET SDK 10.0.301. This review accompanies the planned SleepEdit Desktop 0.1.7 release.</p>
+<p>This guide reports what the reviewed source and checked-in configuration establish. It uses four status terms:</p>
+<ul>
+<li><strong>Confirmed from source</strong> means the reviewed implementation directly supports the statement.</li>
+<li><strong>Deployment dependent</strong> means the code permits or expects the behavior, but the hosting or customer configuration determines the result.</li>
+<li><strong>Not implemented</strong> means the reviewed repository contains no implementation of the capability.</li>
+<li><strong>Requires confirmation</strong> means source code cannot establish the operational, contractual, legal, or organizational fact.</li>
+</ul>
+<p>This is technical documentation, not a certification, legal opinion, penetration-test report, or assurance that all identifiers or vulnerabilities will be detected.</p>
+<h2 id="quick-review">Quick review</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hosting</td>
+<td>The production deployment workflow redeploys a containerized web service on Koyeb. Customer-specific hosting options are not established by source.</td>
+</tr>
+<tr>
+<td>Framework</td>
+<td>ASP.NET Core MVC, Blazor Server, a shared Razor Class Library, and a Windows WPF/Blazor Hybrid host.</td>
+</tr>
+<tr>
+<td>Current .NET version</td>
+<td>.NET 10; SDK 10.0.301 is pinned.</td>
+</tr>
+<tr>
+<td>PHI persistence</td>
+<td>The working note is not written to the application databases. In the web UI it is held in the DOM and <code>sessionStorage</code> for up to 30 minutes. Users can still enter PHI, and AI use creates a separate transmission path.</td>
+</tr>
+<tr>
+<td>AI optional?</td>
+<td>Yes. AI settings default to disabled. Deterministic note generation, protocol viewing, medication selection, and local dictation do not require OpenAI.</td>
+</tr>
+<tr>
+<td>AI provider</td>
+<td>OpenAI, through the Responses API at <code>api.openai.com</code>.</td>
+</tr>
+<tr>
+<td>AI pre-screening</td>
+<td>Current text, note text, selected protocol values, and history are screened locally. Likely PHI in the current request blocks transmission; likely PHI in prior history causes that history to be omitted. Detection is not guaranteed.</td>
+</tr>
+<tr>
+<td>Presidio</td>
+<td>Not used by the current runtime. Screening and supported screenshot redaction are in-process local operations.</td>
+</tr>
+<tr>
+<td>Human review required?</td>
+<td>Yes. AI suggestions and deterministic documentation remain reviewable content. AI changes require an explicit Apply action; protocol publication is a separate explicit action.</td>
+</tr>
+<tr>
+<td>API key exposed to browser?</td>
+<td>Web: no; the key is read by the server from configuration. Desktop: the key is used by the local process and protected on disk with Windows DPAPI, machine scope.</td>
+</tr>
+<tr>
+<td>Database contains PHI?</td>
+<td>The application does not intentionally store patient notes. LiteDB stores protocols, settings, themes, and medication catalog data. Misuse could still place sensitive text in administrative content.</td>
+</tr>
+<tr>
+<td>External network dependencies</td>
+<td>OpenAI is optional for AI. OpenFDA is optional for drug-label reference. The web UI also needs same-origin HTTPS and WebSocket connectivity to the SleepEdit server.</td>
+</tr>
+<tr>
+<td>HTTPS</td>
+<td>The app redirects to HTTPS and enables HSTS outside Development, but TLS termination and edge-to-container encryption are deployment dependent. The container listens on HTTP port 8000.</td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>Normal web use has no user authentication. Web administration uses one configured shared password. Desktop administration uses one shared password for the configured content folder. No SSO, MFA, or RBAC is implemented.</td>
+</tr>
+<tr>
+<td>Admin credential handling</td>
+<td>Web: raw configured password remains in process configuration; an ASP.NET password hash is created in memory for comparisons. Desktop: PBKDF2-SHA256, 600,000 iterations, random salt; only salt and hash are stored.</td>
+</tr>
+<tr>
+<td>Logging</td>
+<td>Structured application events and exceptions are logged. Note bodies, AI prompts, AI answers, request bodies, and API keys are not intentionally logged. Some user-controlled names and exception details can appear. Retention and access are deployment dependent.</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>No Google Analytics, advertising tracker, third-party product analytics, or crash-reporting SDK was found in the reviewed source.</td>
+</tr>
+<tr>
+<td>Security scanning</td>
+<td>Microsoft security analyzers, .NET tests and coverage, NuGet and npm vulnerability audits, SonarQube Cloud, frontend tests, and a 70% aggregate coverage gate are configured.</td>
+</tr>
+<tr>
+<td>Public security evidence</td>
+<td>Current rendered evidence is published at <a href="https://security.sleepedit.net/">security.sleepedit.net</a>.</td>
+</tr>
+<tr>
+<td>Support/security contact</td>
+<td>The application currently publishes <code>damon.german@sleepedit.net</code>. Dedicated <code>security@</code> or <code>support@</code> aliases are not verified and are not published here.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-is-sleepedit-and-what-is-outside-its-scope">What is SleepEdit, and what is outside its scope?</h2>
+<p><strong>Confirmed from source, with regulatory status requiring confirmation.</strong> SleepEdit is documentation and workflow software for sleep disorder centers. It provides a sleep-note editor, deterministic narrative generation from structured selections, protocol guidance, medication reference, local speech-to-text, optional AI assistance, and administration of protocols, themes, medication catalogs, and AI settings.</p>
+<p>The application states that it assists documentation and does not diagnose patients or replace clinical judgment. No EHR write-back, autonomous treatment decision, or automatic commitment of generated documentation was found. A user reviews content in the editor and decides whether to copy, print, or otherwise use it.</p>
+<h3 id="technical-detail">Technical detail</h3>
+<p>Deterministic note generation is implemented as C# rules that convert validated selections into narrative text. The AI assistant is a separate optional workflow. Source code cannot determine whether SleepEdit is legally a medical device; that classification requires owner and regulatory review before publication as a definitive claim.</p>
+<h2 id="who-is-the-intended-user-and-what-requires-human-review">Who is the intended user, and what requires human review?</h2>
+<p><strong>Confirmed from source.</strong> The UI and documentation identify sleep technicians, clinicians, and authorized administrators as intended users. All clinical content remains subject to qualified human review. AI answers may include a proposed note replacement or protocol change plan, but the user must explicitly apply it.</p>
+<h3 id="technical-detail-1">Technical detail</h3>
+<p>For a note proposal, the browser rejects application if the note changed after the proposal was generated. For a protocol plan, the service validates the operation schema, simulates each operation against the draft, and rejects stale plans. Applying a plan changes the draft only; saving and publishing are separate actions. A removal plan also receives an additional browser confirmation.</p>
+<h2 id="which-functions-are-deterministic-and-which-are-ai-assisted">Which functions are deterministic, and which are AI-assisted?</h2>
+<p><strong>Confirmed from source.</strong> Deterministic functions include structured note generation, medication narrative creation, protocol viewing and checklist composition, local Vosk dictation, protocol editing, and configuration management. AI functions include answering sleep-documentation questions, proposing a replacement for the working note, and proposing bounded protocol-edit operations.</p>
+<h3 id="technical-detail-2">Technical detail</h3>
+<p>The deterministic generators do not call OpenAI. Drug-label lookup is an external OpenFDA lookup but is not generative AI. AI settings default to disabled, and missing settings or provider credentials cause AI requests to be unavailable without disabling the deterministic workflows.</p>
+<h2 id="can-sleepedit-operate-if-ai-is-disabled-or-openai-is-unavailable">Can SleepEdit operate if AI is disabled or OpenAI is unavailable?</h2>
+<p><strong>Confirmed from source.</strong> Yes. The main clinical editor, deterministic generator, protocol viewer, medication catalog, and local dictation continue to work. An unavailable AI request returns a generic temporary-unavailable message and does not apply a change.</p>
+<h3 id="technical-detail-3">Technical detail</h3>
+<p>The web application itself still requires connectivity to the SleepEdit server. Desktop deterministic functions can run without public internet if their required local or shared content is available. OpenFDA drug details and OpenAI assistance will not work offline.</p>
+<h2 id="what-technologies-and-application-hosts-are-used">What technologies and application hosts are used?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit has three major layers:</p>
+<ul>
+<li><strong>Web application:</strong> ASP.NET Core MVC plus interactive Blazor Server components.</li>
+<li><strong>Desktop application:</strong> a 64-bit Windows WPF shell using Blazor WebView.</li>
+<li><strong>Shared application logic:</strong> a Razor Class Library containing shared UI, services, domain logic, data access, de-identification, and static assets.</li>
+</ul>
+<h3 id="technical-detail-4">Technical detail</h3>
+<p>The web and shared projects target <code>net10.0</code>; the desktop targets <code>net10.0-windows</code>. The desktop reuses the shared Razor components and services in-process. The web host supplies HTTP controllers, server sessions, security middleware, and web-specific storage paths. The desktop host supplies WPF navigation, machine configuration, local database paths, and Windows secret protection.</p>
+<h2 id="where-does-processing-occur-in-web-and-desktop-modes">Where does processing occur in web and desktop modes?</h2>
+<p><strong>Confirmed from source.</strong> In web mode, the editable note DOM, formatting, local draft, printing, and Vosk audio recognition run in the browser. Blazor Server component events, deterministic C# services, persistence, PHI screening, and external API calls run on the server. In desktop mode, the shared C# services run inside the installed Windows process, while browser-like UI code runs in WebView2.</p>
+<h3 id="technical-detail-5">Technical detail</h3>
+<p>Blazor Server uses a same-origin real-time connection, normally WebSockets, for interactive components. This means structured form events can traverse the web connection even though the final free-text working note is deliberately kept in the browser except when the user invokes AI. Desktop Blazor Hybrid does not start an ASP.NET web server in the reviewed code.</p>
+<h2 id="are-high-level-architecture-diagrams-maintained">Are high-level architecture diagrams maintained?</h2>
+<p><strong>Confirmed from source.</strong> Eight source-maintained PlantUML diagrams are rendered as SVG and published on the <a href="../architecture/">architecture and workflows page</a>. They cover system architecture, sleep-note authoring, medication lookup, protocol viewing, AI assistance, protocol administration, shared settings, and desktop setup.</p>
+<h3 id="technical-detail-6">Technical detail</h3>
+<p>The public SVGs are derived artifacts. The editable PlantUML sources live with the application source so changes can be reviewed with the code.</p>
+<h2 id="what-is-the-lifecycle-of-a-working-clinical-note">What is the lifecycle of a working clinical note?</h2>
+<p><strong>Confirmed from source.</strong> The working note is created and edited in the browser or desktop WebView. In the web app, it is saved to that tab's <code>sessionStorage</code> with a 30-minute application lifetime. It is not written to SleepEdit's LiteDB databases. A browser refresh can restore it while valid; ending the browser tab session normally removes it, although browser session-restore behavior varies.</p>
+<p>The note is sent outside this browser-local boundary only when the user explicitly invokes a function that requires it. In the current source, the important exception is AI assistance: the current editor text is sent to the SleepEdit server and, after local screening, may be sent to OpenAI. Printing and copying are explicit user actions controlled by the browser or desktop.</p>
+<h3 id="technical-detail-7">Technical detail</h3>
+<p>The storage record contains HTML, selected medication names, and a timestamp. Empty notes are removed. The code has no server endpoint that saves the complete working editor note as a patient record.</p>
+<h2 id="what-browser-storage-cookies-and-caches-are-used">What browser storage, cookies, and caches are used?</h2>
+<p><strong>Confirmed from source.</strong> <code>sessionStorage</code> stores the working note and AI display conversation, each with a 30-minute application lifetime. <code>localStorage</code> stores theme preference, sidebar state, and collapsed protocol-editor section IDs. No IndexedDB use was found.</p>
+<p>The web server configures an essential, HttpOnly ASP.NET session cookie. That server session holds the admin-unlocked flag and protocol-editor session state, not the working clinical note. ASP.NET anti-forgery protection can also use framework cookies at runtime. No advertising or analytics cookies were found.</p>
+<h3 id="technical-detail-8">Technical detail</h3>
+<p>Server session idle timeout is 30 minutes and the configured backing store is distributed memory, which is process-local in this deployment. Exact cookie names and deployed Secure/SameSite attributes should be verified at runtime because the application does not explicitly set all of them.</p>
+<h2 id="what-data-is-persisted">What data is persisted?</h2>
+<p><strong>Confirmed from source, with retention deployment dependent.</strong> Persisted application data is administrative and reference data: protocol drafts and versions, published protocols, sleep-note option lists, themes, AI enablement/model policy, medication catalog records, shared-content cache files, desktop machine settings, desktop WebView2 data, and cryptographic key material. The application does not intentionally persist patient notes or AI conversations server-side.</p>
+<h3 id="technical-detail-9">Technical detail</h3>
+<p>The web host uses <code>sleepeditweb.db</code> and <code>medications.db</code>. The desktop uses <code>sleepedit.db</code>, <code>medications.db</code>, a shared or standalone content folder, <code>desktop-settings.json</code>, a WebView2 profile, and local cache files under <code>%ProgramData%\SleepEdit</code> by default. Shared published content is JSON. Retention is effectively until changed, deleted, uninstalled, or the deployment storage is replaced; no formal retention schedule is implemented.</p>
+<h2 id="data-flow-table">Data flow table</h2>
+<table>
+<thead>
+<tr>
+<th>Information</th>
+<th>Created where</th>
+<th>Processed where</th>
+<th>Persisted where</th>
+<th>Sent externally?</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generated technical note</td>
+<td>Structured form in browser/WebView</td>
+<td>Web server for Blazor Server; local process for desktop</td>
+<td>Working editor <code>sessionStorage</code> only</td>
+<td>No, unless AI or user export/copy is invoked</td>
+<td>Deterministic rules; no automatic EHR commit</td>
+</tr>
+<tr>
+<td>User-entered note text</td>
+<td>Browser/WebView editor</td>
+<td>Browser/WebView normally; server/local process during AI</td>
+<td>Browser/WebView <code>sessionStorage</code>, up to 30 minutes</td>
+<td>OpenAI only after explicit Ask and screening</td>
+<td>Not stored in LiteDB</td>
+</tr>
+<tr>
+<td>Protocol selections</td>
+<td>Browser/WebView</td>
+<td>Shared protocol services</td>
+<td>Selection state is transient; UI collapse state is localStorage</td>
+<td>Included in OpenAI context if AI is asked</td>
+<td>Published protocol content is administrative, durable data</td>
+</tr>
+<tr>
+<td>Protocol configuration</td>
+<td>Admin editor</td>
+<td>Server or desktop process</td>
+<td>LiteDB and optionally shared published JSON/cache</td>
+<td>Included in AI context for relevant requests</td>
+<td>Draft save and publish are separate</td>
+</tr>
+<tr>
+<td>Admin credentials</td>
+<td>Web deployment config or desktop setup</td>
+<td>Web server or desktop process</td>
+<td>Web raw value in configuration and hash in memory; desktop salt/hash in shared JSON</td>
+<td>No</td>
+<td>Desktop raw password is not stored</td>
+</tr>
+<tr>
+<td>OpenAI API key</td>
+<td>Hosting secret/config or desktop setup</td>
+<td>Web server or desktop process</td>
+<td>Web storage is deployment dependent; desktop DPAPI-protected bytes in <code>desktop-settings.json</code></td>
+<td>Sent as bearer credential to OpenAI</td>
+<td>Never intentionally sent to browser or logged</td>
+</tr>
+<tr>
+<td>Screenshots/images</td>
+<td>Browser/WebView attachment</td>
+<td>Server/local process; local OCR/redaction when supported</td>
+<td>Not intentionally saved</td>
+<td>Redacted PNG may be sent to OpenAI</td>
+<td>Current UI enables this only where Windows local redaction is supported</td>
+</tr>
+<tr>
+<td>Medication reference information</td>
+<td>Bundled/administrative catalog</td>
+<td>Server or desktop process</td>
+<td><code>medications.db</code></td>
+<td>Selected drug name may be sent to OpenFDA</td>
+<td>Returned OpenFDA response is transient</td>
+</tr>
+<tr>
+<td>AI prompts</td>
+<td>Browser/WebView</td>
+<td>Server/local process and local PHI screen</td>
+<td>Browser <code>sessionStorage</code> contains display turns; no server prompt store</td>
+<td>Sent to OpenAI after gates</td>
+<td>Protocol or editor context is included by request type</td>
+</tr>
+<tr>
+<td>AI responses</td>
+<td>OpenAI</td>
+<td>Server/local process, then browser/WebView</td>
+<td>Browser <code>sessionStorage</code> display turns, up to 30 minutes</td>
+<td>Received from OpenAI</td>
+<td>Schema and semantic validation precede display/application</td>
+</tr>
+<tr>
+<td>Logs</td>
+<td>Server or desktop process</td>
+<td>Host logging provider</td>
+<td>Host/platform dependent</td>
+<td>May be received by hosting log service</td>
+<td>No application retention setting</td>
+</tr>
+</tbody>
+</table>
+<h2 id="is-sleepedit-designed-to-store-phi-and-could-phi-still-be-entered">Is SleepEdit designed to store PHI, and could PHI still be entered?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit does not intentionally store a patient record or working note in its application databases. It is still a clinical documentation editor, so users can type PHI into the working note, protocol fields, medication names, filenames, or AI prompts. Avoiding intentional database persistence is not the same as proving that PHI can never exist in memory, browser storage, logs, screenshots, clipboard content, print output, or external requests.</p>
+<h3 id="technical-detail-10">Technical detail</h3>
+<p>Likely-PHI screening is specific to AI request paths. It is not a general data-loss-prevention layer over every text field, protocol import, administrator field, log placeholder, clipboard operation, or print operation.</p>
+<h2 id="what-phi-screening-occurs-before-ai-calls">What PHI screening occurs before AI calls?</h2>
+<p><strong>Confirmed from source.</strong> Before the main AI answer request, SleepEdit screens current user text using two local layers: bounded regular-expression heuristics and an in-process named-entity recognizer. The recognizer confidence threshold is 0.70. Protected entity categories include people, contact data, government and financial identifiers, locations, URLs, network identifiers, and dates. Known published-protocol text is treated as trusted context to reduce false positives.</p>
+<p>Likely PHI in the current question, editor text, or selected values blocks the request before any provider call. Prior conversation history is screened separately; if flagged, it is omitted from the provider request while the user receives a notice. These controls reduce risk but are not foolproof.</p>
+<h3 id="technical-detail-11">Technical detail</h3>
+<p>The local heuristic recognizes labeled identifiers, email addresses, telephone/SSN-like values, and patient-related absolute dates. The local NER model adds entity detection. Detection failures fail the AI operation rather than silently bypassing the detector.</p>
+<h2 id="what-is-microsoft-presidio-used-for">What is Microsoft Presidio used for?</h2>
+<p><strong>Not implemented in the current runtime.</strong> The reviewed source makes no runtime Presidio request and registers no Presidio HTTP client. Current text screening uses the bundled <code>Deidentify</code> code in-process. Current supported image OCR/redaction also runs in-process.</p>
+<h3 id="technical-detail-12">Technical detail</h3>
+<p>Older design documents refer to a Presidio service, but they are not authoritative for the current implementation. A future deployment could add a separately reviewed DLP service, but that is not the behavior documented here.</p>
+<h2 id="what-happens-when-likely-phi-is-detected">What happens when likely PHI is detected?</h2>
+<p><strong>Confirmed from source.</strong> If local screening flags the current request, SleepEdit returns a refusal explaining that the request was blocked and was not sent to the AI provider. If only prior history is flagged, the history is removed from the current provider request and processing can continue. If OpenAI's schema-constrained response flags likely PHI, SleepEdit refuses the result and does not offer a proposal.</p>
+<h3 id="technical-detail-13">Technical detail</h3>
+<p>Provider-side classification is defense in depth, not a pre-transmission safeguard: the question has already reached OpenAI for the classification call. SleepEdit therefore does not represent its controls as a guarantee that PHI can never reach the provider.</p>
+<h2 id="how-are-screenshots-handled">How are screenshots handled?</h2>
+<p><strong>Confirmed from source, with host support limitations.</strong> The UI accepts one PNG no larger than 6 MB, with maximum dimensions of 4096 by 4096 and no more than 12 million pixels. When image support is enabled, OCR and redaction occur locally before the OpenAI answer request. Only the resulting validated PNG is attached. SleepEdit does not intentionally save the original or redacted image.</p>
+<h3 id="technical-detail-14">Technical detail</h3>
+<p>The current code advertises image analysis only when running on Windows. That normally makes it a desktop capability, not a feature of the Linux container deployment. The server routes still validate image uploads, so deployment testing should confirm that unsupported hosts cannot expose a misleading image path.</p>
+<h2 id="which-openai-api-and-features-are-used">Which OpenAI API and features are used?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit uses <code>POST /v1/responses</code> on <code>api.openai.com</code>. Requests set <code>store:false</code>, provide a strict JSON schema, set an output-token limit and reasoning effort, and send an empty tools array. No Assistants, Threads, vector stores, Files, web search, or function tools are used by the reviewed code.</p>
+<h3 id="technical-detail-15">Technical detail</h3>
+<p>Allowed answer models are currently <code>gpt-5.6-sol</code>, <code>gpt-5.6-terra</code>, and <code>gpt-5.6-luna</code>; the classifier model is <code>gpt-5.6-luna</code>. An administrator controls AI enablement, answer model, and maximum reasoning effort. Actual model availability and an organization's approved model list remain deployment/account dependent.</p>
+<h2 id="what-information-is-sent-to-openai">What information is sent to OpenAI?</h2>
+<p><strong>Confirmed from source.</strong> For the sleep-note assistant, the first provider call sends only the current question and whether an image is attached for domain classification. If allowed, the answer call sends the question, current editor text, screened recent history, the published protocol, resolved selected protocol items, and an optional locally redacted image.</p>
+<p>For the protocol-editor assistant, the request includes the administrator instruction, screened recent history, selected node ID, the complete current unsaved protocol draft, and an optional locally redacted image. SleepEdit does not retrieve or send an EHR record. It will, however, send whatever clinical text the user has placed in the working editor when the user explicitly asks the assistant.</p>
+<h3 id="technical-detail-16">Technical detail</h3>
+<p>At most eight recent history turns are sent, each capped at 2,000 characters. The working note is capped at 40,000 characters. Protocol drafts and provider output have separate size and item limits.</p>
+<h2 id="how-are-ai-responses-validated-and-applied">How are AI responses validated and applied?</h2>
+<p><strong>Confirmed from source.</strong> Responses must match a strict JSON schema. Sleep-note answers are checked for required fields, lengths, valid protocol references, and refusal/PHI status. Protocol plans are restricted to nine supported operation kinds, validated for size and references, and simulated against the current draft.</p>
+<p>No AI response automatically changes the note, configuration, protocol, or published content. A user must select Apply. A stale note or stale protocol plan is rejected. Saving and publishing protocol changes remain explicit administrative actions.</p>
+<h3 id="technical-detail-17">Technical detail</h3>
+<p>Malformed output, invalid references, unavailable provider responses, or failed semantic validation produce a generic unavailable or clarification result. They do not fall back to unvalidated text application.</p>
+<h2 id="does-storefalse-mean-zero-data-retention-or-no-model-training">Does <code>store:false</code> mean zero data retention or no model training?</h2>
+<p><strong>Confirmed only as an API request setting.</strong> The code requests <code>store:false</code>. The repository contains no evidence that Zero Data Retention or Modified Abuse Monitoring is enabled for the OpenAI organization or project. The code also cannot establish contractual model-training terms.</p>
+<h3 id="technical-detail-18">Technical detail</h3>
+<p>Provider retention, abuse monitoring, BAA eligibility, data ownership, and model-training treatment must be confirmed against the specific OpenAI account, project, contract, and current provider documentation. <code>store:false</code> alone is not equivalent to a contractual zero-retention guarantee.</p>
+<h2 id="where-is-the-openai-api-key-stored-in-web-deployments">Where is the OpenAI API key stored in web deployments?</h2>
+<p><strong>Confirmed from source, protection at rest deployment dependent.</strong> The web server reads <code>OPENAI_API_KEY</code> from ASP.NET configuration, normally supplied as an environment variable or hosting secret. The key is attached to server-side outbound requests and is not embedded in JavaScript, rendered into the page, or returned by an endpoint.</p>
+<h3 id="technical-detail-19">Technical detail</h3>
+<p>The application does not encrypt or persist the web key itself. Protection at rest depends on the deployment's secret store. The raw value remains available to the application process through configuration. Replacing it normally requires updating the hosting secret/configuration and restarting or redeploying the process. Revocation is performed in the owning OpenAI account.</p>
+<h2 id="where-is-the-openai-api-key-stored-in-desktop-deployments">Where is the OpenAI API key stored in desktop deployments?</h2>
+<p><strong>Confirmed from source.</strong> Desktop setup accepts a locally supplied key. It is encrypted with Windows DPAPI using <code>DataProtectionScope.LocalMachine</code>, stored as protected bytes in <code>%ProgramData%\SleepEdit\desktop-settings.json</code>, and read by the local SleepEdit process. An environment variable can be used as a fallback.</p>
+<h3 id="technical-detail-20">Technical detail</h3>
+<p>Machine-scope DPAPI binds the protected value to Windows rather than to one user account. The installer restricts the machine root, settings, content root, and security directory to read/execute for standard Users while leaving only the state, WebView2, cache, and shared-data directories writable. SYSTEM and local Administrators retain full control. Upgrade/repair reapplies protected-file ACLs. This protects the default local layout from ordinary-user replacement but is not per-user cryptographic isolation.</p>
+<h2 id="can-a-customer-bring-its-own-openai-key-and-whose-baa-applies">Can a customer bring its own OpenAI key, and whose BAA applies?</h2>
+<p><strong>Technically confirmed; contractual answer requires confirmation.</strong> Both hosts can use a customer-supplied key: deployment configuration for web, or desktop setup/environment configuration for desktop. Requests are billed and governed by the OpenAI account and project that owns that key.</p>
+<h3 id="technical-detail-21">Technical detail</h3>
+<p>Whether a SleepEdit LLC agreement applies to a customer-owned OpenAI account is a contractual question, not something code can decide. A hospital should confirm the account owner, project controls, eligible endpoints/models, retention configuration, and executed agreements before authorizing clinical data.</p>
+<h2 id="how-does-web-administrator-authentication-work">How does web administrator authentication work?</h2>
+<p><strong>Confirmed from source.</strong> Web administration uses one shared password from the <code>AdminAccess</code> configuration section. At startup, ASP.NET's password hasher creates an in-memory hash used for comparison. A successful login writes an unlocked flag to the server session; logout removes it. Admin and Protocol Editor paths are enforced by server middleware, not only hidden in the UI.</p>
+<h3 id="technical-detail-22">Technical detail</h3>
+<p>The raw configured password is not written to the application database, but it remains in process configuration. The session idle timeout is 30 minutes. There is no username, role, MFA, SSO, account lockout, failed-attempt counter, login rate limit, or central session-revocation feature. Failed logins and successful unlock/lock events are logged without the submitted password.</p>
+<h2 id="is-there-a-default-web-administrator-password-and-how-is-it-reset">Is there a default web administrator password, and how is it reset?</h2>
+<p><strong>No production default is defined in normal application settings.</strong> A fixed credential exists in the checked-in local development launch profile and must not be treated as a production secret. If no web password is configured, web admin login cannot succeed.</p>
+<h3 id="technical-detail-23">Technical detail</h3>
+<p>There is no in-application web reset or password-recovery workflow. An operator replaces the deployment configuration value and restarts or redeploys the application. The old password cannot be recovered from SleepEdit; it can only be replaced. Hospitals should ensure production never uses the development launch profile or credential.</p>
+<h2 id="how-does-desktop-administrator-authentication-work">How does desktop administrator authentication work?</h2>
+<p><strong>Confirmed from source.</strong> Desktop has one shared administrator password for the configured content folder. It requires at least 12 characters. The raw password is not persisted. SleepEdit stores a 16-byte random salt and a 32-byte PBKDF2-SHA256 hash using 600,000 iterations in <code>admin-access.json</code>.</p>
+<h3 id="technical-detail-24">Technical detail</h3>
+<p>Unlock state is an in-process Boolean and ends when the desktop process closes. There is no username, role, MFA, lockout, rate limit, or durable login audit. Reset replaces the salt and hash and does not require the old password, but the reset path launches the setup process through Windows UAC and requires local-administrator approval. The installer protects the default local security directory from standard-user writes. A configured external share remains dependent on customer-managed share and NTFS permissions.</p>
+<h2 id="does-sleepedit-support-sso-roles-or-enterprise-identity">Does SleepEdit support SSO, roles, or enterprise identity?</h2>
+<p><strong>Not implemented.</strong> No OIDC, OAuth login, SAML, LDAP, Active Directory, Kerberos, MFA, user directory, or RBAC implementation was found. Normal web use is anonymous; administrative use is controlled by one shared password.</p>
+<h3 id="technical-detail-25">Technical detail</h3>
+<p>Enterprise SSO or a reverse-proxy identity layer would be a separate deployment/integration project and must include server-side authorization of every protected route. It should not be represented as current functionality merely because a hosting platform could be placed in front of SleepEdit.</p>
+<h2 id="which-features-and-endpoints-require-administrator-access">Which features and endpoints require administrator access?</h2>
+<p><strong>Confirmed from source.</strong> Web middleware protects <code>/Admin</code> and <code>/ProtocolEditor</code>, covering medication administration, theme administration, AI policy, and protocol editing. Destructive Sleep Note configuration operations and medication-catalog removal also require the server-derived administrator session. Anti-forgery validation protects mutation requests. Normal users can view protocols, edit working notes, generate notes, use medications, add shared mask/medication catalog choices in the demonstration workflow, and—if enabled—use AI.</p>
+<h3 id="technical-detail-26">Technical detail</h3>
+<p>Shared mask-type, mask-size, and medication additions remain normal technician operations by product decision for the demonstration workflow. Removal and reset operations require the administrator session and anti-forgery validation. Named users, enterprise roles, and hospital identity integration are not implemented.</p>
+<h2 id="can-browser-manipulation-grant-administrator-access">Can browser manipulation grant administrator access?</h2>
+<p><strong>Confirmed from source.</strong> Merely showing a hidden UI control or changing a client-side route does not set the server session's admin-unlocked value. Web middleware checks the server session for every protected request. A valid stolen session cookie would still be a session-hijacking risk.</p>
+<h3 id="technical-detail-27">Technical detail</h3>
+<p>Desktop administration is a local-process boundary rather than a network authorization boundary. It depends on the installed binary, in-process route guard, and filesystem permissions. A user with local code execution or writable shared content is outside the protection expected from a web identity system.</p>
+<h2 id="what-network-connectivity-is-required">What network connectivity is required?</h2>
+<p><strong>Confirmed from source, exact hostnames deployment dependent.</strong> The web service requires inbound HTTPS from users and same-origin WebSocket connectivity for Blazor Server. The container listens internally on TCP 8000 over HTTP. Optional outbound HTTPS destinations are OpenAI and OpenFDA. The application does not require arbitrary runtime internet access for its deterministic functions.</p>
+<h3 id="technical-detail-28">Technical detail</h3>
+<p>Desktop does not configure an inbound listener or localhost service. It may need access to a configured UNC/network share. OpenAI and OpenFDA are contacted directly by the local process in desktop mode. Build and deployment systems have additional dependencies such as NuGet, npm, GitHub, GHCR, Microsoft .NET downloads, model downloads, and Koyeb APIs; those are not application-runtime destinations.</p>
+<h2 id="network-and-allowlist-table">Network and allowlist table</h2>
+<table>
+<thead>
+<tr>
+<th>Hostname/domain</th>
+<th>Direction</th>
+<th style="text-align: right;">Port</th>
+<th>Purpose</th>
+<th>Required/optional</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Customer-approved SleepEdit web hostname, currently <code>sleepedit.net</code></td>
+<td>Inbound to web / outbound from browser</td>
+<td style="text-align: right;">443</td>
+<td>Web UI, MVC, Blazor Server, same-origin WSS</td>
+<td>Required for web</td>
+</tr>
+<tr>
+<td><code>api.openai.com</code></td>
+<td>Outbound from web server or desktop</td>
+<td style="text-align: right;">443</td>
+<td>Optional AI Responses API</td>
+<td>Optional; required only for AI</td>
+</tr>
+<tr>
+<td><code>api.fda.gov</code></td>
+<td>Outbound from web server or desktop</td>
+<td style="text-align: right;">443</td>
+<td>Drug-label reference lookup</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>Configured UNC or shared-content host</td>
+<td>Desktop LAN traffic</td>
+<td style="text-align: right;">Deployment specific</td>
+<td>Shared protocols, themes, AI policy, and admin credential</td>
+<td>Optional; required only for shared desktop content</td>
+</tr>
+<tr>
+<td>Koyeb control plane</td>
+<td>CI/CD outbound</td>
+<td style="text-align: right;">443</td>
+<td>Production redeploy command</td>
+<td>Required for the current deployment workflow, not runtime</td>
+</tr>
+<tr>
+<td><code>ghcr.io</code></td>
+<td>Koyeb/deployment outbound</td>
+<td style="text-align: right;">443</td>
+<td>Container image retrieval</td>
+<td>Required for the current deployment, not browser use</td>
+</tr>
+</tbody>
+</table>
+<h2 id="outbound-dependency-table">Outbound dependency table</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Purpose</th>
+<th>Domain</th>
+<th>Protocol</th>
+<th>Required/optional</th>
+<th>Data sent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>AI classification, answers, and protocol plans</td>
+<td><code>api.openai.com</code></td>
+<td>HTTPS</td>
+<td>Optional</td>
+<td>Question; permitted note/protocol/history context; optional redacted PNG; API credential</td>
+</tr>
+<tr>
+<td>OpenFDA</td>
+<td>Drug-label reference</td>
+<td><code>api.fda.gov</code></td>
+<td>HTTPS</td>
+<td>Optional</td>
+<td>Selected medication name</td>
+</tr>
+<tr>
+<td>Shared file service</td>
+<td>Desktop shared configuration</td>
+<td>Customer configured</td>
+<td>SMB or customer filesystem protocol</td>
+<td>Optional</td>
+<td>Published administrative content and desktop admin hash/salt; no intended patient note</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-happens-when-a-network-dependency-is-blocked">What happens when a network dependency is blocked?</h2>
+<p><strong>Confirmed from source.</strong> OpenAI failure produces a generic temporary-unavailable AI result; deterministic features continue. OpenFDA failure returns a user-facing unable-to-connect or no-result response; medication narrative selection still works. Loss of the web server or its Blazor connection interrupts web interaction. Desktop can continue local deterministic work if its required content is available.</p>
+<h3 id="technical-detail-29">Technical detail</h3>
+<p>The OpenAI client has a 10-minute HTTP timeout but no automatic retry policy. OpenFDA tries a brand-name query and then a generic-name query; it has no general retry or circuit breaker. Unsaved browser work is recoverable only from the valid local <code>sessionStorage</code> record.</p>
+<h2 id="how-is-tls-enforced">How is TLS enforced?</h2>
+<p><strong>Confirmed in application code; termination details deployment dependent.</strong> The web host processes forwarded headers, redirects HTTP to HTTPS with a 308 outside Development, and enables HSTS outside Development. It also sends a restrictive Content Security Policy plus cross-origin opener/embedder headers.</p>
+<h3 id="technical-detail-30">Technical detail</h3>
+<p>The container itself listens on HTTP port 8000, so a reverse proxy such as Koyeb must terminate public TLS. The repository does not prove whether every proxy-to-container hop is encrypted. It also does not prove certificate authority, renewal, cipher policy, or customer-specific TLS inspection behavior.</p>
+<h2 id="what-encryption-exists-at-rest">What encryption exists at rest?</h2>
+<p><strong>Confirmed from source.</strong> LiteDB databases, shared JSON content, local cache files, browser storage, and persisted ASP.NET data-protection key files are not application-level encrypted. Desktop OpenAI key bytes are protected by Windows DPAPI at machine scope. Desktop admin passwords are stored only as salted PBKDF2 hashes. Web secret encryption and volume encryption depend on the hosting platform.</p>
+<h3 id="technical-detail-31">Technical detail</h3>
+<p>Because the working note is not intentionally placed in the databases, database encryption does not protect that browser-local note. It remains relevant for administrative content, credentials, logs, browser profiles, and any sensitive data entered contrary to intended use. Backup encryption cannot be claimed because no application backup system is configured.</p>
+<h2 id="where-and-how-is-the-public-web-application-deployed">Where and how is the public web application deployed?</h2>
+<p><strong>Confirmed from checked-in workflow.</strong> A GitHub Actions workflow builds the root Dockerfile, publishes <code>main</code> and commit-SHA images to GitHub Container Registry, and requests a Koyeb redeploy of the production <code>sleepedit</code> service. The final image uses the .NET 10 ASP.NET runtime, runs as non-root user 1654, and exposes port 8000.</p>
+<h3 id="technical-detail-32">Technical detail</h3>
+<p>The build uses Ubuntu 24.04 plus a pinned .NET SDK download and checksum-verified local NER and Vosk model artifacts. The production service's region, instance size, scaling, persistent volume, health check, TLS edge, private networking, and secret-store configuration are not recorded in this repository and require deployment confirmation.</p>
+<h2 id="are-deployments-automated-gated-and-reversible">Are deployments automated, gated, and reversible?</h2>
+<p><strong>Confirmed with limitations.</strong> Container publication and Koyeb redeployment are automated on pushes to <code>main</code>. Security scanning also runs on pushes and relevant pull requests, but the deployment workflow does not depend on the security-scan workflow. A direct push can therefore deploy before the push scan completes.</p>
+<h3 id="technical-detail-33">Technical detail</h3>
+<p>Images are tagged by commit SHA, which gives a technical artifact identifier. No automated rollback workflow, canary deployment, blue/green process, downtime statement, or tested rollback runbook was found. Koyeb and GHCR may provide operational rollback capabilities, but their configuration and testing require confirmation.</p>
+<h2 id="can-sleepedit-be-hosted-on-premises-or-in-a-dedicated-instance">Can SleepEdit be hosted on premises or in a dedicated instance?</h2>
+<p><strong>Technically possible, commercially and operationally unconfirmed.</strong> The web app is a containerized ASP.NET Core application with configurable storage paths and environment-based secrets. That makes alternate hosting feasible in principle. The source does not define a supported on-premises product, Helm chart, infrastructure-as-code package, sizing guide, support agreement, or dedicated-instance policy.</p>
+<h3 id="technical-detail-34">Technical detail</h3>
+<p>An enterprise deployment would need persistent storage, TLS termination, secret management, identity integration, backups, monitoring, log handling, patching, and an approved network design. None should be assumed from the container alone.</p>
+<h2 id="what-is-the-windows-desktop-application">What is the Windows desktop application?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit Desktop is a WPF shell hosting the same shared Blazor UI and application services through Blazor WebView. It is not a browser pointed at the public SleepEdit server. Clinical services, local PHI screening, deterministic generation, persistence, and optional external API calls execute in the desktop process.</p>
+<h3 id="technical-detail-35">Technical detail</h3>
+<p>The current source targets 64-bit Windows and publishes a self-contained .NET <code>win-x64</code> payload. It stores the WebView2 profile under <code>%ProgramData%\SleepEdit\webview2</code>. Availability of the required Microsoft WebView2 runtime should be validated in the hospital desktop image.</p>
+<h2 id="can-security-and-architecture-evidence-be-viewed-without-access-to-the-public-website">Can security and architecture evidence be viewed without access to the public website?</h2>
+<p><strong>Confirmed from source.</strong> Yes. The desktop release bundles a validated static snapshot of the security report, this IT review, architecture/workflow diagrams, and trend page. The About page opens those files inside the local WPF/Blazor shell, so viewing the evidence does not require access to <code>security.sleepedit.net</code>.</p>
+<h3 id="technical-detail-36">Technical detail</h3>
+<p>The snapshot is copied from an explicit public-file allowlist, records its source commit in <code>snapshot.json</code>, and is validated before installer packaging. This makes the evidence pages local; it does not make optional OpenAI or OpenFDA requests network-free.</p>
+<h2 id="how-is-desktop-software-installed-and-updated">How is desktop software installed and updated?</h2>
+<p><strong>Confirmed from source.</strong> The installer is a per-machine, x64 MSI built with WiX 3.14.1. Application files install under 64-bit Program Files. Machine data defaults to <code>%ProgramData%\SleepEdit</code>. Initial setup requests elevation and can configure a local or UNC shared-content path, an admin password, AI policy, and a local API key.</p>
+<h3 id="technical-detail-37">Technical detail</h3>
+<p>The MSI supports major upgrades and blocks downgrades. New tagged releases can publish an MSI to GitHub Releases. No automatic updater is implemented; a new MSI must be deployed. No Authenticode/code-signing step is present in the build workflow, so signing status must not be assumed.</p>
+<h2 id="what-does-uninstall-remove">What does uninstall remove?</h2>
+<p><strong>Confirmed from installer configuration.</strong> Uninstall removes the application, shortcuts, legacy registry key, and the complete local <code>%ProgramData%\SleepEdit</code> tree, including local databases, caches, WebView2 data, standalone content, and the protected local API-key copy. It does not delete an external configured network share.</p>
+<h3 id="technical-detail-38">Technical detail</h3>
+<p>This behavior is destructive for local configuration and should be incorporated into endpoint-management backup and redeployment procedures. A repair or upgrade is designed to preserve machine configuration and data.</p>
+<h2 id="how-are-protocols-created-stored-and-published">How are protocols created, stored, and published?</h2>
+<p><strong>Confirmed from source.</strong> Administrators can create named protocols, load them into an editor, modify a durable draft, save, import/export, and explicitly publish. Web data is stored in LiteDB; desktop can also publish a JSON snapshot to a configured shared content folder. Normal protocol viewing is read-only.</p>
+<h3 id="technical-detail-39">Technical detail</h3>
+<p>The repository maintains a workspace draft and published snapshot, named protocols, current-protocol records, and timestamped protocol versions. Shared publication uses an atomic temporary-file-and-move operation and refreshes a local cache. Browser developer tools cannot publish a web protocol without both a valid admin server session and anti-forgery token, although a user who controls the underlying data files is outside that boundary.</p>
+<h2 id="are-protocol-changes-automatically-active">Are protocol changes automatically active?</h2>
+<p><strong>Confirmed from source.</strong> No. Editing changes the in-memory/session draft. Save persists a draft. Publish is a separate explicit action that updates the published record and, when configured, the shared published JSON file. AI-assisted operations first require Apply and still require the ordinary save/publish actions.</p>
+<h3 id="technical-detail-40">Technical detail</h3>
+<p>The source records timestamps and versions but has no user identity model. It can list stored versions internally, but a complete, documented user-facing restore workflow for every historical version was not confirmed. Shared publication overwrites the current shared JSON snapshot.</p>
+<h2 id="can-protocol-or-configuration-changes-be-audited">Can protocol or configuration changes be audited?</h2>
+<p><strong>Not comprehensively.</strong> Protocol versions and workspace timestamps provide change history, and application logs record operation types, IDs, sources, and counts. They do not identify a human user because administration uses a shared password. There is no tamper-resistant audit ledger.</p>
+<h3 id="technical-detail-41">Technical detail</h3>
+<p>Anyone with direct database or shared-folder access can alter or delete the underlying records. Theme, AI-policy, medication, and protocol changes are not represented as a unified audit stream. Hospitals requiring attributable audit history need an additional control.</p>
+<h2 id="what-databases-exist-and-do-they-contain-patient-data">What databases exist, and do they contain patient data?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit uses embedded LiteDB files. <code>sleepeditweb.db</code> or desktop <code>sleepedit.db</code> contains application configuration, protocol data, themes, and AI settings. <code>medications.db</code> contains built-in and user-added medication catalog records and seed metadata. The schema does not intentionally include patient records or working clinical notes.</p>
+<h3 id="technical-detail-42">Technical detail</h3>
+<p>Medication databases are writable, not immutable bundled references. Administrators can import, replace, reseed, rename, remove, and export catalog data; the normal medication tool also supports approved catalog maintenance paths. The database files are not application-level encrypted.</p>
+<h2 id="what-writable-state-survives-a-restart-or-deployment">What writable state survives a restart or deployment?</h2>
+<p><strong>Confirmed from source; web durability deployment dependent.</strong> LiteDB files, shared JSON, desktop machine settings, and cache files survive process restart when their filesystem storage survives. Browser <code>localStorage</code> survives browser restarts; <code>sessionStorage</code> has tab-session semantics and a 30-minute application expiry. In-memory web sessions do not survive a process restart.</p>
+<h3 id="technical-detail-43">Technical detail</h3>
+<p>The Linux default data path is <code>/app/Data</code>. A persistent Koyeb volume or equivalent durable mount is required for data to survive container replacement. Whether the current production service has that mount is not proven by this repository.</p>
+<h2 id="what-does-sleepedit-log">What does SleepEdit log?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit logs endpoint and service lifecycle events, validation outcomes, operation counts, model names, token counts, protocol IDs, selected medication/drug names for lookup, admin unlock/lock outcomes, and exceptions. Default application level is Information and ASP.NET Core level is Warning.</p>
+<p>It does not intentionally log raw request bodies, complete notes, AI questions, AI answers, screenshots, passwords, API keys, authorization headers, cookies, or OpenAI payloads. This is an implementation policy, not a technical guarantee that PHI can never enter a log.</p>
+<h3 id="technical-detail-44">Technical detail</h3>
+<p>Some logged fields are user controlled, including drug names, protocol names, filenames, and paths. Exceptions may include operational details. There is no centralized redaction processor. Destination, access control, export, integrity, and retention are supplied by the host's logging configuration and are not defined by SleepEdit.</p>
+<h2 id="are-authentication-failures-and-administrator-actions-logged">Are authentication failures and administrator actions logged?</h2>
+<p><strong>Partially.</strong> Web incorrect-password attempts, successful unlocks, and logout events are logged. Many protocol and settings operations are logged by action and object ID. Desktop password attempts and password resets are not a durable, attributable audit trail.</p>
+<h3 id="technical-detail-45">Technical detail</h3>
+<p>Logs do not contain a username because no individual user identity exists. They should not be represented as a HIPAA audit log or as sufficient nonrepudiation evidence.</p>
+<h2 id="are-exception-details-shown-to-users">Are exception details shown to users?</h2>
+<p><strong>Confirmed from source.</strong> In non-Development environments, ASP.NET uses a general error handler and HSTS. AI and several service failures return generic user messages. Development behavior can expose more diagnostic detail and must not be used for production.</p>
+<h3 id="technical-detail-46">Technical detail</h3>
+<p>The application logs exception objects server-side. The exact hosting log viewer and who can access it require deployment confirmation.</p>
+<h2 id="what-automated-security-and-quality-controls-run-in-ci">What automated security and quality controls run in CI?</h2>
+<p><strong>Confirmed from checked-in workflow.</strong> The security workflow runs Microsoft .NET security analyzers, a release build, .NET tests with OpenCover coverage, direct and transitive NuGet vulnerability review, npm audit with failure on high or critical findings, first-party frontend unit coverage, SonarQube Cloud analysis, a Sonar quality gate, a checked-in finding baseline, and a 70% aggregate coverage minimum.</p>
+<h3 id="technical-detail-47">Technical detail</h3>
+<p>The workflow runs on pull requests to <code>main</code> or <code>develop</code>, pushes to <code>main</code>, and manual dispatch. Evidence artifacts are retained by GitHub Actions for 90 days and a sanitized report is published at <a href="https://security.sleepedit.net/">security.sleepedit.net</a>. Current public ratings should be read from that live report rather than copied into this guide.</p>
+<h2 id="are-browser-tests-performed">Are browser tests performed?</h2>
+<p><strong>Confirmed in the repository, not confirmed as a required CI gate.</strong> The repository contains Playwright tests for clinical workflows, privacy boundaries, CSP, administration, protocol editing, mobile layouts, and accessibility-related interactions. The current security and frontend workflows do not run the Playwright suite.</p>
+<h3 id="technical-detail-48">Technical detail</h3>
+<p>Unit and component tests run in the security workflow. A hospital should not infer continuous rendered-browser regression coverage merely from the presence of Playwright tests.</p>
+<h2 id="are-codeql-dependabot-secret-scanning-dast-or-penetration-testing-used">Are CodeQL, Dependabot, secret scanning, DAST, or penetration testing used?</h2>
+<p><strong>Not established by the reviewed repository.</strong> No CodeQL workflow, Dependabot configuration file, DAST workflow, penetration-test report, or formal secret-scanning workflow was found. SonarQube performs static analysis and basic secrets analysis, while NuGet and npm audits check known vulnerable dependencies.</p>
+<h3 id="technical-detail-49">Technical detail</h3>
+<p>Repository-host settings can enable Dependabot or GitHub secret scanning without a checked-in file, so those require GitHub administration confirmation. No penetration test should be claimed without a dated report and scope. The existing security documentation explicitly describes OWASP ZAP as a future recommended layer, not a completed control.</p>
+<h2 id="how-are-third-party-dependencies-managed">How are third-party dependencies managed?</h2>
+<p><strong>Confirmed from source.</strong> Direct NuGet versions are explicit in project files. npm installs are locked by <code>package-lock.json</code> in CI. GitHub Actions in the main security and release workflows are mostly pinned to commits. NuGet direct/transitive vulnerability checks and npm audit run automatically.</p>
+<h3 id="technical-detail-50">Technical detail</h3>
+<p>Major runtime dependencies include ASP.NET Core, Blazor WebView WPF, LiteDB, ONNX Runtime, Microsoft tokenizers, SkiaSharp, Tesseract, Vosk, Bootstrap, and limited browser libraries. This guide intentionally does not reproduce the full package list.</p>
+<h2 id="is-an-sbom-generated-and-are-licenses-tracked">Is an SBOM generated, and are licenses tracked?</h2>
+<p><strong>Not implemented.</strong> No CycloneDX, SPDX, Syft, or other SBOM generation was found. The repository contains some third-party license files, but no complete automated license inventory or policy gate was found.</p>
+<h3 id="technical-detail-51">Technical detail</h3>
+<p>An SBOM can technically be generated from the project, package-lock, restore graph, container, and MSI, but “available on request” is a commercial commitment that requires confirmation. An SBOM should be produced and archived per release before making that promise.</p>
+<h2 id="are-build-artifacts-signed-or-reproducible">Are build artifacts signed or reproducible?</h2>
+<p><strong>Partially confirmed.</strong> Container builds pin and checksum major downloaded SDK/model inputs and tag images by source SHA. Desktop releases are built from a tagged or manually supplied version. No container signature, provenance attestation, MSI Authenticode signing, deterministic-build attestation, or reproducibility verification was found.</p>
+<h3 id="technical-detail-52">Technical detail</h3>
+<p>The repository uses exact direct package versions, but restore can still depend on external feeds and transitive resolution. Hospitals should request a release-specific hash, SBOM, scan evidence, and signed artifact when those controls are implemented.</p>
+<h2 id="what-needs-backup">What needs backup?</h2>
+<p><strong>Confirmed from source; backup policy not implemented.</strong> Because SleepEdit does not intentionally persist the working patient note, application backups primarily protect protocols, shared published content, themes, AI policy, sleep-note option lists, medication catalogs, desktop machine settings, and cryptographic keys. Browser working notes are not centrally backed up.</p>
+<h3 id="technical-detail-53">Technical detail</h3>
+<p>Medication data can be exported as JSON. Protocols can be exported as JSON or XML through the relevant UI. LiteDB and shared-content files can be copied with an application-consistent procedure. No scheduled backup job, retention schedule, off-site copy, restore test, or backup encryption control is included.</p>
+<h2 id="what-are-the-disaster-recovery-commitments">What are the disaster-recovery commitments?</h2>
+<p><strong>Requires confirmation.</strong> No formal RPO, RTO, high-availability design, disaster-recovery plan, hosting-provider failure procedure, or tested restore runbook was found.</p>
+<h3 id="technical-detail-54">Technical detail</h3>
+<p>A technical restore would require a known-good application image or MSI, durable data and shared-content backups, deployment configuration, cryptographic keys, and current secrets. Source control and container registries help reconstruct software but are not substitutes for customer-data/configuration backup.</p>
+<h2 id="what-happens-during-common-failures">What happens during common failures?</h2>
+<p><strong>Confirmed from source, operational recovery deployment dependent.</strong> OpenAI and OpenFDA failures degrade only their optional features. A web-server or Blazor connection failure interrupts interactive web work. The local 30-minute working-note record can restore a recent note in the same browser tab context. Desktop local deterministic work can continue without the public web service.</p>
+<h3 id="technical-detail-55">Technical detail</h3>
+<p>There is no application-wide offline synchronization, queued retry, multi-region failover, or conflict resolution. If a web process restarts, admin and protocol editor sessions are lost. If container storage is ephemeral, durable application configuration can also be lost.</p>
+<h2 id="what-data-is-retained-and-how-is-it-deleted">What data is retained and how is it deleted?</h2>
+<p><strong>Confirmed from source; formal policy absent.</strong> Working notes and AI display history have a 30-minute browser-storage lifetime and can be cleared by the user. The application does not retain AI conversations server-side. Administrative databases and files remain until an administrator changes/deletes them, storage is removed, or desktop uninstall deletes local data.</p>
+<h3 id="technical-detail-56">Technical detail</h3>
+<p>Logs and backups have no application-defined retention. OpenAI retention beyond <code>store:false</code> is not established. There is no patient-record deletion API because no patient-record data model exists. There is also no comprehensive “delete every trace” workflow for browser caches, host logs, print queues, clipboard content, or provider-side records.</p>
+<h2 id="does-sleepedit-collect-analytics-telemetry-or-crash-reports">Does SleepEdit collect analytics, telemetry, or crash reports?</h2>
+<p><strong>Confirmed from reviewed source.</strong> No Google Analytics, tag manager, advertising tracker, third-party product analytics, Application Insights, Sentry, or external crash-reporting SDK was found. .NET CLI telemetry is disabled during the container build.</p>
+<h3 id="technical-detail-57">Technical detail</h3>
+<p>Ordinary server/desktop logs still record usage and failures, and hosting infrastructure can collect network and platform telemetry. Those platform controls and retention are deployment dependent.</p>
+<h2 id="does-sleepedit-use-tracking-cookies-or-pixels">Does SleepEdit use tracking cookies or pixels?</h2>
+<p><strong>Confirmed from reviewed source.</strong> No advertising cookie, tracking pixel, third-party tracker, or analytics consent framework was found. The application uses an essential server session and framework anti-forgery mechanisms.</p>
+<h3 id="technical-detail-58">Technical detail</h3>
+<p>Whether a consent banner is legally required depends on the deployed cookies, jurisdiction, organization policy, and any infrastructure added outside this code. The current source alone does not create a marketing-cookie consent requirement.</p>
+<h2 id="what-privacy-statement-exists">What privacy statement exists?</h2>
+<p><strong>A complete privacy statement is not implemented.</strong> The current <code>/Privacy</code> page is a placeholder. The About page describes technical data handling and safety boundaries but is not a comprehensive privacy notice.</p>
+<h3 id="technical-detail-59">Technical detail</h3>
+<p>Questions about personal-information collection, sale, advertising use, ownership, customer reuse, data-subject rights, and contractual deletion are legal/organizational commitments and cannot be answered from code. The technical implementation has no advertising or cross-customer patient-data store, but that does not replace a published privacy policy.</p>
+<h2 id="is-sleepedit-hipaa-compliant-or-certified">Is SleepEdit HIPAA compliant or certified?</h2>
+<p><strong>No such claim is made.</strong> Source code cannot establish HIPAA compliance, certification, Covered Entity status, or Business Associate status. HIPAA has no general software “certification” that this guide can confer. Technical safeguards are only part of a hospital's administrative, physical, contractual, and risk-management evaluation.</p>
+<h3 id="technical-detail-60">Technical detail</h3>
+<p>The deterministic workflow does not require SleepEdit to retain a patient record, but users can enter PHI. AI screening is risk reduction, not guaranteed de-identification. A BAA does not by itself make software, a vendor, or a deployment HIPAA compliant.</p>
+<h2 id="what-is-the-openai-baa-status">What is the OpenAI BAA status?</h2>
+<p><strong>Requires owner confirmation before publication as a contractual fact.</strong> The private repository contains a draft BAA request and questions for OpenAI, but no executed agreement or account-level retention approval. This guide therefore does not state that a BAA exists.</p>
+<h3 id="technical-detail-61">Technical detail</h3>
+<p>If an agreement is executed, the hospital must still confirm the covered OpenAI organization/project, permitted API, models, retention settings, customer-key boundary, incident terms, and the complete SleepEdit deployment. Contract execution would not change the code's local screening, <code>store:false</code>, or human-review requirements by itself.</p>
+<h2 id="which-external-service-providers-are-involved">Which external service providers are involved?</h2>
+<p><strong>Confirmed technically; legal roles require confirmation.</strong> The current deployment uses Koyeb for the web runtime and GitHub/GHCR for source workflows and container distribution. OpenAI is an optional runtime AI provider. OpenFDA is an optional public drug-label data source. GitHub Pages hosts the public security-evidence site.</p>
+<h3 id="technical-detail-62">Technical detail</h3>
+<p>This guide does not label any provider a HIPAA subprocessor. That characterization depends on contracts, service configuration, and whether PHI is permitted or received.</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Purpose</th>
+<th>Data potentially received</th>
+<th>Required/optional</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Koyeb</td>
+<td>Current production web hosting</td>
+<td>Application traffic and host logs/metrics; exact visibility depends on TLS and logging configuration</td>
+<td>Required for current public web deployment</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>AI classification, answers, and protocol plans</td>
+<td>Screened request context and optional redacted image</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>OpenFDA</td>
+<td>Public drug-label lookup</td>
+<td>Medication name</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>GitHub / GHCR</td>
+<td>Source automation, security evidence, releases, container images</td>
+<td>Source/build metadata; not intended clinical runtime data</td>
+<td>Required for current delivery process</td>
+</tr>
+<tr>
+<td>GitHub Pages</td>
+<td>Public security documentation</td>
+<td>Reviewer browser request metadata</td>
+<td>Optional to clinical operation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="is-there-a-formal-incident-response-process">Is there a formal incident-response process?</h2>
+<p><strong>Not established by the repository.</strong> No formal incident-response plan, severity matrix, notification timeline, evidence-preservation procedure, or customer-notification playbook was found.</p>
+<h3 id="technical-detail-63">Technical detail</h3>
+<p>The application publishes <code>damon.german@sleepedit.net</code> as its current general contact. Dedicated security and support aliases are not verified. Hospitals should require a documented reporting channel, responsible roles, notification terms, and escalation process before production approval.</p>
+<h2 id="is-there-a-vulnerability-disclosure-program">Is there a vulnerability-disclosure program?</h2>
+<p><strong>Not implemented.</strong> No <code>security.txt</code>, SECURITY.md, coordinated-disclosure policy, or bug-bounty program was found. This guide does not imply a bug bounty exists.</p>
+<h3 id="technical-detail-64">Technical detail</h3>
+<p>A simple policy should define the reporting address, safe-harbor expectations, supported versions, encryption option, acknowledgment target, remediation communication, and exclusions. The address must be configured and owner-approved before publication.</p>
+<h2 id="how-are-updates-and-security-patches-managed">How are updates and security patches managed?</h2>
+<p><strong>Partially confirmed; service levels require confirmation.</strong> Source changes are tracked in Git. Main-branch container images are built and redeployed automatically. Desktop updates require building and installing a new MSI. Dependency audits and analyzers identify many update needs.</p>
+<h3 id="technical-detail-65">Technical detail</h3>
+<p>.NET 10 is the current target. Whether it is an LTS release and the organization's patch window should be confirmed against the current Microsoft lifecycle at review time. No committed patch SLA, emergency-release process, supported-version policy, or desktop auto-update mechanism was found.</p>
+<h2 id="how-is-change-management-enforced">How is change management enforced?</h2>
+<p><strong>Partially confirmed.</strong> GitHub workflows support pull-request scanning and record production image source SHAs. Security and quality evidence is published for <code>main</code>. The repository does not itself prove that branch protection requires pull requests or successful checks, and the deployment workflow can run independently of the security workflow.</p>
+<h3 id="technical-detail-66">Technical detail</h3>
+<p>Installer releases create GitHub release entries with source SHA information. No formal release-note standard, approval matrix, segregation-of-duties policy, or customer change-notification process was found.</p>
+<h2 id="what-browsers-and-accessibility-standards-are-supported">What browsers and accessibility standards are supported?</h2>
+<p><strong>Requires confirmation.</strong> No formal browser/OS support matrix, minimum screen resolution, WCAG conformance statement, VPAT, or independent accessibility audit was found.</p>
+<h3 id="technical-detail-67">Technical detail</h3>
+<p>The web app requires JavaScript, modern ES modules, WebSockets/SignalR, WebAssembly for local Vosk dictation, AudioWorklet and microphone permission for dictation, browser storage, and contenteditable support. Source includes ARIA labels, keyboard behaviors, responsive layouts, component tests, and Playwright interaction tests, but these are not equivalent to formal conformance.</p>
+<h2 id="does-sleepedit-integrate-with-epic-an-ehr-hl7-or-fhir">Does SleepEdit integrate with Epic, an EHR, HL7, or FHIR?</h2>
+<p><strong>Not implemented.</strong> No Epic, EHR, HL7, FHIR, SMART on FHIR, hospital database, domain credential, or direct chart-write integration was found. SleepEdit does not automatically commit generated text to an EHR.</p>
+<h3 id="technical-detail-68">Technical detail</h3>
+<p>The technologist can review and then copy, print, or otherwise transfer text through ordinary user action. Any future EHR integration would introduce new authentication, authorization, audit, data-flow, interface-engine, availability, and vendor-contract review requirements.</p>
+<h2 id="what-hospital-privileges-does-installation-require">What hospital privileges does installation require?</h2>
+<p><strong>Confirmed from source.</strong> The web application requires no local workstation installation, but users need browser access to the approved URL and WebSockets. The desktop MSI is per-machine and initial setup requests administrator elevation. Normal desktop use is not coded to require elevation.</p>
+<h3 id="technical-detail-69">Technical detail</h3>
+<p>Desktop setup writes Program Files and ProgramData, can access a UNC share, and can store a machine-scoped API key. Endpoint-management packaging, EDR compatibility, allowlisting, WebView2 runtime, code signing, and share permissions require hospital validation.</p>
+<h2 id="who-owns-data-entered-into-sleepedit">Who owns data entered into SleepEdit?</h2>
+<p><strong>Requires contractual confirmation.</strong> The source contains no customer-data ownership clause, license grant for clinical content, OpenAI ownership term, or promise about reuse. It therefore cannot answer who legally owns hospital-entered content.</p>
+<h3 id="technical-detail-70">Technical detail</h3>
+<p>Technically, SleepEdit does not maintain a cross-customer patient-content database or reuse stored notes for another tenant. OpenAI receives data only on explicit AI requests. Legal ownership, provider rights, training terms, and customer export/deletion rights must be documented separately.</p>
+<h2 id="is-the-current-application-multi-tenant">Is the current application multi-tenant?</h2>
+<p><strong>Not implemented as a tenant-aware system.</strong> No tenant identifier, organization-scoped authorization, per-tenant database partition, or customer-isolation layer was found. A web deployment is one application instance with shared configuration and one shared admin password.</p>
+<h3 id="technical-detail-71">Technical detail</h3>
+<p>Customer isolation would therefore depend on deploying separate instances and storage, or on implementing a reviewed tenant and identity model. A dedicated-instance commitment is commercial and operational, not established by source.</p>
+<h2 id="what-supports-business-continuity-and-portability">What supports business continuity and portability?</h2>
+<p><strong>Confirmed technically, commitments unknown.</strong> Deterministic functionality does not depend on OpenAI. Protocols can be represented as JSON or XML, medication data can be exported as JSON, and the application is built on common .NET/container/Windows technologies. This reduces some technical lock-in.</p>
+<h3 id="technical-detail-72">Technical detail</h3>
+<p>There is no source-escrow agreement, cessation plan, customer-run license, guaranteed export service, or documented transition assistance. The ability to reconstruct and operate the product after vendor cessation is a commercial/legal question.</p>
+<h2 id="is-sleepedit-open-source">Is SleepEdit open source?</h2>
+<p><strong>Requires owner confirmation; no open-source grant was found.</strong> The root repository has no public open-source license file. The application identifies SLEEPEDIT LLC as developer/licensor and displays an all-rights-reserved notice. Third-party components retain their own licenses.</p>
+<h3 id="technical-detail-73">Technical detail</h3>
+<p>Without an explicit license, public source availability alone would not grant open-source rights. Customer source access, escrow, audit rights, and proprietary component boundaries require a contract or published licensing policy.</p>
+<h2 id="ai-request-sequence-for-architecture-review">AI request sequence for architecture review</h2>
+<p><strong>Confirmed from source.</strong> The following is the accurate high-level sequence. “Likely PHI” is not a successful return value that continues into an answer; it is a blocking or history-removal decision.</p>
+<h3 id="technical-detail-74">Technical detail</h3>
+<pre><code class="language-text">User selects Ask
+  -&gt; validate size, shape, and current editor/draft revision
+  -&gt; locally screen current question + editor/draft + selected values
+       -&gt; likely PHI: block; do not call OpenAI
+  -&gt; locally screen prior conversation
+       -&gt; likely PHI in history: omit history and continue with notice
+  -&gt; sleep-note path only: OpenAI domain classification of question
+       -&gt; off topic or provider refusal: return refusal; no answer request
+       -&gt; provider flags likely PHI: return refusal; question was already sent
+  -&gt; locally OCR/redact optional image when supported
+       -&gt; failure: stop; do not send image or answer request
+  -&gt; OpenAI Responses API request with store:false, no tools, strict schema
+  -&gt; parse schema and validate lengths, references, status, and operations
+       -&gt; invalid: return generic unavailable/clarification; do not apply
+  -&gt; show answer and optional proposal to the user
+  -&gt; optional explicit Apply
+       -&gt; stale or semantically invalid: reject
+       -&gt; valid: update working note or protocol draft only
+  -&gt; separate explicit Save/Publish for protocol administration
+</code></pre>
+<h2 id="additional-hospital-review-questions">Additional hospital review questions</h2>
+<p>The following questions are commonly raised during enterprise reviews and are not fully covered by a standard product questionnaire.</p>
+<h2 id="in-which-geographic-region-is-application-data-processed">In which geographic region is application data processed?</h2>
+<p><strong>Requires deployment confirmation.</strong> The source identifies Koyeb as the current host but does not declare the production region, data-residency commitment, log region, backup region, or OpenAI project processing controls.</p>
+<h3 id="technical-detail-75">Technical detail</h3>
+<p>Region and cross-border-transfer review must cover the selected Koyeb service, any volume and log service, OpenAI account/project, OpenFDA request metadata, GitHub delivery systems, and hospital endpoints.</p>
+<h2 id="is-high-availability-configured">Is high availability configured?</h2>
+<p><strong>Requires deployment confirmation.</strong> No multi-instance, multi-zone, or multi-region topology is defined in source.</p>
+<h3 id="technical-detail-76">Technical detail</h3>
+<p>The use of process-local sessions and writable LiteDB files also means scaling to multiple web instances requires an explicit session, database, and file-consistency design.</p>
+<h2 id="what-health-checks-and-monitoring-exist">What health checks and monitoring exist?</h2>
+<p><strong>Not implemented as an application contract.</strong> No dedicated readiness or liveness endpoint, synthetic monitor, alert route, on-call policy, or service-level dashboard was found.</p>
+<h3 id="technical-detail-77">Technical detail</h3>
+<p>Koyeb may provide platform health checks and metrics, but their current configuration and alert recipients require confirmation.</p>
+<h2 id="what-capacity-and-performance-limits-are-documented">What capacity and performance limits are documented?</h2>
+<p><strong>Requires confirmation.</strong> No hospital sizing guide, concurrency test, load-test report, maximum-user statement, or performance SLO was found.</p>
+<h3 id="technical-detail-78">Technical detail</h3>
+<p>Relevant limits include Blazor Server circuit memory, OpenAI request duration, process-local sessions, LiteDB write concurrency, WebSocket count, and the configured Koyeb instance size.</p>
+<h2 id="can-the-web-app-run-behind-a-hospital-reverse-proxy-or-web-application-firewall">Can the web app run behind a hospital reverse proxy or web application firewall?</h2>
+<p><strong>Technically possible, not certified.</strong> ASP.NET processes forwarded host, scheme, and client-IP headers. No tested WAF or reverse-proxy configuration is supplied.</p>
+<h3 id="technical-detail-79">Technical detail</h3>
+<p>The proxy must support WebSockets, preserve anti-forgery/session cookies, set trusted forwarded headers, enforce the approved host, and avoid buffering or inspecting clinical content contrary to policy.</p>
+<h2 id="does-sleepedit-support-an-outbound-http-proxy">Does SleepEdit support an outbound HTTP proxy?</h2>
+<p><strong>Not explicitly configured.</strong> The application uses standard .NET <code>HttpClient</code>, but no application option for proxy URL, proxy credentials, PAC files, or no-proxy rules was found.</p>
+<h3 id="technical-detail-80">Technical detail</h3>
+<p>Operating-system or container-level proxy behavior may work, but OpenAI and OpenFDA flows must be tested without exposing credentials in proxy logs.</p>
+<h2 id="does-sleepedit-use-mutual-tls-or-certificate-pinning">Does SleepEdit use mutual TLS or certificate pinning?</h2>
+<p><strong>Not implemented.</strong> Outbound clients use ordinary platform HTTPS validation. No client certificate, private CA bundle, certificate pin, or mTLS option was found.</p>
+<h3 id="technical-detail-81">Technical detail</h3>
+<p>TLS inspection and private trust roots are deployment concerns. Any interception should be reviewed for handling of AI payloads and API credentials.</p>
+<h2 id="is-ipv6-required-or-explicitly-supported">Is IPv6 required or explicitly supported?</h2>
+<p><strong>Requires runtime confirmation.</strong> No IPv6-specific listener, firewall, allowlist, or test configuration was found.</p>
+<h3 id="technical-detail-82">Technical detail</h3>
+<p>The container binds through ASP.NET's generic HTTP URL and external DNS/provider networking determines address families.</p>
+<h2 id="does-the-container-run-with-least-privilege">Does the container run with least privilege?</h2>
+<p><strong>Confirmed in the image, broader controls deployment dependent.</strong> The final container runs as non-root user 1654. It needs write access to its data and data-protection-key paths.</p>
+<h3 id="technical-detail-83">Technical detail</h3>
+<p>No read-only root filesystem, dropped Linux capabilities, seccomp profile, network policy, or Kubernetes security context is defined because no Kubernetes manifest is supplied.</p>
+<h2 id="does-the-desktop-app-install-or-run-a-windows-service">Does the desktop app install or run a Windows service?</h2>
+<p><strong>Not implemented.</strong> The reviewed MSI installs an interactive WPF application and shortcuts. It does not create a Windows service, scheduled task, local web server, or background agent.</p>
+<h3 id="technical-detail-84">Technical detail</h3>
+<p>Initial setup elevates through <code>runas</code>; normal application startup runs in the interactive user's context.</p>
+<h2 id="can-multiple-web-instances-safely-share-the-current-data-store">Can multiple web instances safely share the current data store?</h2>
+<p><strong>Not established.</strong> The current design uses local LiteDB files and in-memory sessions. No distributed locking, shared session store, or multi-writer topology is configured.</p>
+<h3 id="technical-detail-85">Technical detail</h3>
+<p>Horizontal scaling requires a reviewed persistence and session redesign or a strictly single-writer/shared-filesystem design supported by LiteDB and the hosting platform.</p>
+<h2 id="what-input-and-upload-limits-reduce-denial-of-service-risk">What input and upload limits reduce denial-of-service risk?</h2>
+<p><strong>Partially confirmed.</strong> AI text, history, draft, output, operation count, and image dimensions/bytes are bounded. AI endpoints are limited to 10 requests per minute per observed remote IP with no queue. Protocol and medication imports perform format validation.</p>
+<h3 id="technical-detail-86">Technical detail</h3>
+<p>There is no general application-wide request-rate policy, admin-login rate limit, account lockout, per-session quota, or documented upstream WAF limit.</p>
+<h2 id="how-are-cross-site-request-forgery-and-script-injection-addressed">How are cross-site request forgery and script injection addressed?</h2>
+<p><strong>Confirmed from source.</strong> State-changing web controllers use ASP.NET anti-forgery validation. The site sends a CSP, avoids source-authored inline scripts/styles, renders AI display text with safe DOM text operations, and sanitizes persisted medication names.</p>
+<h3 id="technical-detail-87">Technical detail</h3>
+<p>The CSP is an important mitigation, not a complete injection proof. Uploaded protocol and administrative data still require server validation, which the reviewed services provide for their supported schemas.</p>
+<h2 id="what-security-headers-are-set">What security headers are set?</h2>
+<p><strong>Confirmed from source.</strong> SleepEdit sets CSP, Cross-Origin-Opener-Policy, Cross-Origin-Embedder-Policy, HSTS outside Development, and same-origin resource policy for static files.</p>
+<h3 id="technical-detail-88">Technical detail</h3>
+<p>No explicit Referrer-Policy, Permissions-Policy, or X-Content-Type-Options header was found. The CSP allows <code>ws:</code> and <code>wss:</code> schemes broadly for connectivity; tightening and runtime header verification are recommended.</p>
+<h2 id="is-dictation-audio-sent-over-the-network">Is dictation audio sent over the network?</h2>
+<p><strong>Confirmed from source.</strong> Vosk speech recognition runs in the browser or desktop WebView using a model served with the application. Audio and recognition hypotheses are not intentionally submitted to a SleepEdit HTTP endpoint or external speech provider.</p>
+<h3 id="technical-detail-89">Technical detail</h3>
+<p>The browser microphone and Web Audio pipeline still hold audio in device memory. Browser extensions, endpoint capture tools, or compromised clients are outside the application guarantee.</p>
+<h2 id="how-is-the-local-speech-and-ner-model-supply-chain-controlled">How is the local speech and NER model supply chain controlled?</h2>
+<p><strong>Partially confirmed.</strong> The container build downloads the .NET SDK, NER model, and Vosk model from fixed URLs and verifies SHA-256 checksums before packaging. Desktop builds use repository/package inputs.</p>
+<h3 id="technical-detail-90">Technical detail</h3>
+<p>No signed model manifest, model SBOM, recurring model vulnerability review, or independent provenance attestation was found.</p>
+<h2 id="are-temporary-files-used-for-sensitive-requests">Are temporary files used for sensitive requests?</h2>
+<p><strong>Confirmed from source.</strong> AI image uploads are read from request streams into bounded memory. OpenAI payloads are built in memory. The current AI paths do not intentionally write prompt, response, or screenshot temporary files.</p>
+<h3 id="technical-detail-91">Technical detail</h3>
+<p>Hosting frameworks, reverse proxies, crash dumps, swap, EDR products, and OS diagnostics can create copies outside application control and must be covered by deployment policy.</p>
+<h2 id="can-process-dumps-or-swap-contain-sensitive-text-or-api-keys">Can process dumps or swap contain sensitive text or API keys?</h2>
+<p><strong>Yes, potentially.</strong> The server/desktop process temporarily holds editor text used for AI, redacted image bytes, provider responses, and the API key in memory.</p>
+<h3 id="technical-detail-92">Technical detail</h3>
+<p>SleepEdit does not configure dump encryption, swap encryption, dump collection, or memory-scrubbing guarantees. Hospital endpoint and hosting policies must restrict dump generation and access.</p>
+<h2 id="are-timestamps-and-time-zones-handled-consistently">Are timestamps and time zones handled consistently?</h2>
+<p><strong>Partially confirmed.</strong> Protocol, settings, medication, and report timestamps are generally recorded in UTC. UI display and host clocks remain environment dependent.</p>
+<h3 id="technical-detail-93">Technical detail</h3>
+<p>No NTP enforcement or clock-skew monitoring is included. Audit-quality timelines require trusted host time and explicit display-zone handling.</p>
+<h2 id="is-localization-supported">Is localization supported?</h2>
+<p><strong>Not established.</strong> UI text and generated clinical prose are English, and the installer language is 1033 (English, United States). No localization resource strategy or translated clinical-content validation was found.</p>
+<h3 id="technical-detail-94">Technical detail</h3>
+<p>Numeric formatting is explicitly invariant in some narrative paths, but locale and accessibility testing outside English require separate review.</p>
+<h2 id="does-sleepedit-llc-have-remote-access-to-a-hospital-deployment">Does SLEEPEDIT LLC have remote access to a hospital deployment?</h2>
+<p><strong>Requires confirmation.</strong> No remote-support agent, backdoor, vendor account, or remote-control feature was found in the application.</p>
+<h3 id="technical-detail-95">Technical detail</h3>
+<p>Any support VPN, hosting-console access, endpoint-management channel, or hospital-approved screen sharing would exist outside this code and must be documented contractually and operationally.</p>
+<h2 id="is-the-desktop-app-compatible-with-edr-and-application-control">Is the desktop app compatible with EDR and application control?</h2>
+<p><strong>Requires hospital testing.</strong> The desktop includes a self-contained .NET runtime, WebView2 UI, ONNX inference, Tesseract OCR, SkiaSharp, local databases, WebAssembly assets, and optional outbound HTTPS.</p>
+<h3 id="technical-detail-96">Technical detail</h3>
+<p>Unsigned MSI status, the intentionally writable runtime-data subdirectories, model files, DLL loading, and WebView2 subprocesses are likely application-control review points. No vendor-specific EDR certification was found.</p>
+<h2 id="how-is-configuration-drift-detected">How is configuration drift detected?</h2>
+<p><strong>Not implemented comprehensively.</strong> Shared files include schema versions and timestamps, and security baselines are version controlled. There is no desired-state inventory or alert when production secrets, storage mounts, Koyeb region, proxy rules, or shared-folder ACLs drift.</p>
+<h3 id="technical-detail-97">Technical detail</h3>
+<p>An enterprise deployment should export a sanitized configuration inventory and compare it during release and operational reviews.</p>
+<h2 id="is-key-rotation-automated">Is key rotation automated?</h2>
+<p><strong>Not implemented.</strong> OpenAI keys can be replaced by changing web configuration or rerunning desktop setup, and compromised keys can be revoked at OpenAI. There is no scheduled rotation, dual-key rollover, age alert, or key inventory.</p>
+<h3 id="technical-detail-98">Technical detail</h3>
+<p>Web rotation normally requires restart/redeploy. Desktop rotation replaces the machine-protected value. Operational procedures should verify the old key is revoked and absent from backups/logs.</p>
+<h2 id="what-happens-if-a-litedb-file-is-corrupt">What happens if a LiteDB file is corrupt?</h2>
+<p><strong>Partially handled.</strong> Some repositories fall back to defaults, embedded content, shared published content, or local cache and log the failure. The application does not provide a comprehensive database repair workflow.</p>
+<h3 id="technical-detail-99">Technical detail</h3>
+<p>Recovery depends on a valid export or file backup. Corruption tests and restore instructions should be included in a disaster-recovery runbook.</p>
+<h2 id="how-are-concurrent-administrator-edits-handled">How are concurrent administrator edits handled?</h2>
+<p><strong>Limited controls are confirmed.</strong> Individual web protocol-editor sessions have their own snapshot and stale AI-plan checks. The source does not implement general optimistic concurrency tokens, named-user locks, or merge conflict resolution for multiple administrators.</p>
+<h3 id="technical-detail-100">Technical detail</h3>
+<p>Last-writer behavior and LiteDB serialization can lead to overwritten administrative changes. Hospitals should restrict concurrent administration or require a concurrency enhancement.</p>
+<h2 id="what-happens-if-the-browser-closes-unexpectedly">What happens if the browser closes unexpectedly?</h2>
+<p><strong>Confirmed with browser-dependent limits.</strong> A recent working note and AI display conversation may be restored from that tab's <code>sessionStorage</code> for up to 30 minutes. Browsers normally clear session storage when the tab session ends, but crash and session-restore behavior differs.</p>
+<h3 id="technical-detail-101">Technical detail</h3>
+<p>There is no server draft recovery for the working clinical note. Users should transfer approved output to the system of record before closing when continuity is required.</p>
+<h2 id="can-clipboard-and-print-workflows-create-phi-copies">Can clipboard and print workflows create PHI copies?</h2>
+<p><strong>Yes.</strong> Copying or printing is an explicit user action and can move clinical text into the operating-system clipboard, print spooler, PDF printer, or destination application.</p>
+<h3 id="technical-detail-102">Technical detail</h3>
+<p>SleepEdit does not control clipboard history, printer retention, virtual-print destinations, DLP agents, or the target EHR. Hospital endpoint controls remain necessary.</p>
+<h2 id="can-all-active-admin-sessions-be-revoked-immediately">Can all active admin sessions be revoked immediately?</h2>
+<p><strong>Not implemented.</strong> A web user can log out their session. Restarting the process clears in-memory sessions. There is no administrative view or global revocation command.</p>
+<h3 id="technical-detail-103">Technical detail</h3>
+<p>Changing the password does not directly enumerate or invalidate already-unlocked sessions. Enterprise identity integration should provide central session and credential revocation.</p>
+<h2 id="is-a-threat-model-maintained">Is a threat model maintained?</h2>
+<p><strong>Not confirmed as a current formal artifact.</strong> The repository contains security design documents, diagrams, tests, and findings baselines, but no single current threat model with assets, trust boundaries, abuse cases, owners, and review date was found.</p>
+<h3 id="technical-detail-104">Technical detail</h3>
+<p>The architecture diagrams and this guide provide inputs for a threat model. A formal review should cover anonymous web access, AI data flow, desktop local-user boundaries, shared folders, LiteDB, deployment automation, and third parties.</p>
+<h2 id="what-evidence-should-a-hospital-request-for-the-exact-release">What evidence should a hospital request for the exact release?</h2>
+<p><strong>Recommended review package.</strong> Request the source commit and image/MSI hash, current public scan report, full private scanner evidence under NDA as appropriate, dependency reports, SBOM when available, penetration-test scope/report when completed, deployment configuration inventory, executed agreements, backup/restore evidence, incident-response contacts, and a completed gaps remediation status.</p>
+<h3 id="technical-detail-105">Technical detail</h3>
+<p>Evidence should identify the exact deployed source SHA. A generic report or a scan of a different branch is not proof for the production release.</p>
+
+  </article>
+  <footer>Technical review material for healthcare IT. Verify deployment-dependent and contractual statements for the evaluated environment.</footer>
+</main>
+</body>
+</html>
