@@ -31,6 +31,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path site -Force | Out-Null
           Copy-Item -LiteralPath index.html -Destination site/index.html
+          if (Test-Path -LiteralPath it-security-review -PathType Container) {
+            Copy-Item -LiteralPath it-security-review -Destination site/it-security-review -Recurse
+          }
           if (Test-Path -LiteralPath architecture -PathType Container) {
             Copy-Item -LiteralPath architecture -Destination site/architecture -Recurse
           }
