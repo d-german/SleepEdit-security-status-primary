@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-Wjpzw5i1vxZZSxnS5GhyaypZH0oymLtlFQKsX6eRigE='">
-  <meta http-equiv="refresh" content="0; url=reports/main/">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-Wjpzw5i1vxZZSxnS5GhyaypZH0oymLtlFQKsX6eRigE='; script-src 'sha256-nxq4lhCac4TqXvU5VvQbVo/a9X1CFB0aF5qKI6Exx2U='">
+
   <title>SleepEdit Security and Quality Evidence</title>
   <style>
   :root { color-scheme: light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --bad:#b42318; --neutral:#586577; }
@@ -18,5 +18,5 @@
   footer { padding:24px 4px; color:var(--muted); text-align:center; } @media (max-width:600px) { main { width:min(100% - 16px,1040px); margin-top:8px; } article { padding:20px; } }
 </style>
 </head>
-<body><main><article><p>Opening the current main-branch security and quality results. <a href="reports/main/">Continue to the report</a>.</p></article></main></body>
+<body><main><article><p>Opening the current main-branch security and quality results. <a href="reports/main/">Continue to the report</a>.</p></article></main><script>location.replace('reports/main/')</script></body>
 </html>
