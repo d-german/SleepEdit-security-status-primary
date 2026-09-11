@@ -38,7 +38,6 @@ jobs:
             Copy-Item -LiteralPath architecture -Destination site/architecture -Recurse
           }
           Copy-Item -LiteralPath reports -Destination site/reports -Recurse
-          Copy-Item -LiteralPath trend -Destination site/trend -Recurse
 
       - name: Validate static Pages artifact
         shell: pwsh
