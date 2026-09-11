@@ -3,262 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-PHWukQZHpOJhrrW3ioniQHyl9+oAd2ZTBuEUTZ6da1A='; img-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-Wjpzw5i1vxZZSxnS5GhyaypZH0oymLtlFQKsX6eRigE='">
   <meta name="sleepedit-report-branch" content="main">
-  <meta name="sleepedit-report-commit" content="188261b8d0eec56f14af54c5ba619af2bc0ab106">
-  <meta name="sleepedit-report-state" content="complete">
-
-  <title>SleepEdit Security and Quality Evidence</title>
+  <meta name="sleepedit-report-commit" content="7d06563f2eb12376089f3256d1af9d9d20335e6d">
+  <meta name="sleepedit-report-state" content="incomplete">
+  <title>SleepEdit Security Scan Incomplete</title>
   <style>
-  :root { color-scheme: light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --good:#08783e; --bad:#b42318; --neutral:#586577; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--page); color:var(--ink); font:16px/1.5 "Segoe UI",Arial,sans-serif; }
-  main { width:min(1500px,calc(100% - 32px)); margin:28px auto 64px; }
-  .report-header, section { background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 4px 16px rgba(2,15,89,.06); }
-  .report-header { display:grid; grid-template-columns:1fr auto; gap:20px 32px; padding:28px; border-top:7px solid var(--blue); }
-  h1,h2 { margin:0; color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; }
-  h1 { font-size:clamp(2rem,4vw,3rem); line-height:1.08; }
-  h2 { font-size:1.7rem; }
-  h3 { margin:0 0 10px; font-size:1rem; }
-  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-  .subtitle,.metric-definition,.metric-detail,.empty-state { color:var(--muted); }
-  .subtitle { margin:10px 0 0; }
-  .gate-panel { min-width:200px; display:flex; align-items:center; justify-content:space-between; gap:14px; align-self:start; padding:12px 14px; background:#eef4fb; border-radius:10px; font-weight:650; }
-  .sonar-badge { display:block; max-width:100%; height:auto; }
-  .metadata { grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0; }
-  .metadata div,.count-list div { display:flex; justify-content:space-between; gap:12px; }
-  .metadata div { flex-direction:column; padding:12px; background:#f7f9fc; border-radius:10px; }
-  dt { color:var(--muted); font-size:.84rem; }
-  dd { margin:0; font-weight:650; overflow-wrap:anywhere; }
-  section { margin-top:20px; padding:24px; }
-  .section-heading { display:flex; justify-content:space-between; align-items:end; margin-bottom:18px; }
-  .notice { margin-bottom:18px; padding:12px 14px; border-left:4px solid var(--blue); background:#eef4fb; color:#273b55; }
-  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
-  .metric-card,.evidence-panel,.summary-grid article { padding:16px; border:1px solid var(--line); border-radius:12px; background:#fbfcfe; }
-  .metric-heading { min-height:3rem; margin-bottom:10px; }
-  .metric-heading h3 { margin:0; }
-  .metric-value { margin:4px 0; color:var(--navy); font-size:1.85rem; font-weight:750; }
-  .metric-definition { margin:8px 0 0; font-size:.86rem; }
-  .metric-detail { margin:4px 0 0; font-size:.86rem; }
-  .summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
-  .evidence-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-  .count-list { display:grid; gap:8px; margin:0; }
-  .count-list div { padding-top:8px; border-top:1px solid var(--line); }
-  .table-scroll { max-width:100%; overflow:auto; border:1px solid var(--line); border-radius:10px; }
-  table { width:100%; border-collapse:collapse; font-size:.9rem; }
-  th,td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-  th { position:sticky; top:0; background:#eef4fb; color:var(--navy); font-weight:750; white-space:nowrap; }
-  tbody tr:last-child td { border-bottom:0; }
-  tbody tr:nth-child(even) { background:#fafbfd; }
-  code { font-family:"Cascadia Mono",Consolas,monospace; font-size:.86em; overflow-wrap:anywhere; }
-  a { color:var(--blue); font-weight:650; }
-  .status { display:inline-block; padding:3px 8px; border-radius:999px; color:#fff; font-size:.75rem; font-weight:750; white-space:nowrap; }
-  .status-good { background:var(--good); } .status-bad { background:var(--bad); } .status-neutral { background:var(--neutral); }
-  .spacer { height:14px; }
-  footer { padding:24px 4px; color:var(--muted); text-align:center; }
-  @media (max-width:800px) {
-    main { width:min(100% - 16px,1500px); margin-top:8px; }
-    .report-header { grid-template-columns:1fr; padding:20px; }
-    .gate-panel,.metadata { grid-column:1; }
-    .metadata,.summary-grid,.evidence-grid { grid-template-columns:1fr; }
-    section { padding:18px; }
-    .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  }
-  @media (max-width:480px) { .metric-grid { grid-template-columns:1fr; } }
-  @media print { body { background:#fff; } main { width:100%; margin:0; } .report-header,section { box-shadow:none; break-inside:avoid; } }
+  :root { color-scheme: light; --navy:#020f59; --blue:#00449d; --ink:#18202b; --muted:#586577; --line:#d8dee8; --surface:#fff; --page:#f4f7fb; --bad:#b42318; --neutral:#586577; }
+  * { box-sizing:border-box; } body { margin:0; background:var(--page); color:var(--ink); font:16px/1.5 "Segoe UI",Arial,sans-serif; }
+  main { width:min(1040px,calc(100% - 32px)); margin:32px auto 64px; } article { background:var(--surface); border:1px solid var(--line); border-radius:16px; border-top:7px solid var(--bad); box-shadow:0 4px 16px rgba(2,15,89,.06); padding:28px; }
+  h1,h2 { margin:0; color:var(--navy); font-family:Georgia,"Times New Roman",serif; font-weight:500; } h1 { font-size:clamp(2rem,4vw,3rem); } h2 { margin-top:28px; font-size:1.5rem; }
+  .eyebrow { margin:0 0 6px; color:var(--blue); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; } .notice { margin:20px 0; padding:14px 16px; border-left:4px solid var(--bad); background:#fff1f0; }
+  dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; } dl div { padding:12px; background:#f7f9fc; border-radius:10px; } dt { color:var(--muted); font-size:.84rem; } dd { margin:4px 0 0; font-weight:650; overflow-wrap:anywhere; }
+  table { width:100%; border-collapse:collapse; } th,td { border-bottom:1px solid var(--line); padding:10px 12px; text-align:left; } th { color:var(--navy); } code { overflow-wrap:anywhere; } a { color:var(--blue); font-weight:650; }
+  .table-scroll { overflow:auto; border:1px solid var(--line); border-radius:10px; } .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; } .metric { padding:12px; background:#f7f9fc; border-radius:10px; } .metric strong { display:block; color:var(--navy); font-size:1.4rem; } .notice strong { color:var(--navy); }
+  footer { padding:24px 4px; color:var(--muted); text-align:center; } @media (max-width:600px) { main { width:min(100% - 16px,1040px); margin-top:8px; } article { padding:20px; } }
 </style>
 </head>
-<body>
-  <main>
-    <header class="report-header">
-    <div>
-
-      <h1>SleepEdit Security and Quality Evidence</h1>
-      <p class="subtitle">Detailed scan results. Missing measurements remain visible.</p>
-    </div>
-    <div class="gate-panel">
-      <a href="https://sonarcloud.io/summary/overall?id=d-german_SleepEditWeb&amp;branch=main" aria-label="View the SleepEdit quality gate in SonarQube Cloud"><img class="sonar-badge" src="sonarqube-quality-gate.svg" alt="Official SonarQube Cloud quality gate badge"></a>
-    </div>
-    <dl class="metadata">
-      <div><dt>Evidence scan</dt><dd>Sep 10, 2026, 9:21:01 PM UTC UTC</dd></div>
-      <div><dt>Report generated</dt><dd>Sep 10, 2026, 9:21:40 PM UTC UTC</dd></div>
-      <div><dt>Analyzed commit</dt><dd><code>188261b8d0ee</code></dd></div>
-      <div><dt>SonarQube</dt><dd>8.0.0.105585</dd></div>
-      <div><dt>Branch</dt><dd><code>main</code></dd></div>
-    </dl>
-  </header>
-    <section aria-labelledby="coverage-heading">
-    <div class="section-heading">
-      <div><p class="eyebrow">Measured baseline</p><h2 id="coverage-heading">Coverage</h2></div>
-    </div>
-    <div class="notice">
-      Sonar's retained percentage reflects the coverage report supplied to that analysis. It is not presented as coverage of every source language.
-    </div>
-    <div class="metric-grid">
-      <article class="metric-card" id="sonar-aggregate-coverage">
-    <div class="metric-heading"><h3>Sonar aggregate coverage</h3></div>
-    <p class="metric-value">85.5%</p>
-    <p class="metric-definition">The combined percentage of executable lines and decision conditions exercised by tests in the coverage report imported into SonarQube.</p>
-    <p class="metric-detail">Scanner-reported aggregate</p>
-  </article>
-      <article class="metric-card" id="sonar-line-coverage">
-    <div class="metric-heading"><h3>Sonar line coverage</h3></div>
-    <p class="metric-value">87.9%</p>
-    <p class="metric-definition">The percentage of executable source lines run by tests in the coverage report imported into SonarQube.</p>
-    <p class="metric-detail">Scanner-reported lines</p>
-  </article>
-      <article class="metric-card" id="sonar-branch-coverage">
-    <div class="metric-heading"><h3>Sonar branch coverage</h3></div>
-    <p class="metric-value">80.4%</p>
-    <p class="metric-definition">The percentage of decision outcomes, such as both true and false paths, exercised by tests in the coverage report imported into SonarQube.</p>
-    <p class="metric-detail">Scanner-reported branches</p>
-  </article>
-      <article class="metric-card" id="opencover-coverage">
-    <div class="metric-heading"><h3>OpenCover C# coverage</h3></div>
-    <p class="metric-value">81.07%</p>
-    <p class="metric-definition">C# test coverage measured by OpenCover. The large value is line coverage; branch coverage appears in the supporting detail.</p>
-    <p class="metric-detail">Newest retained OpenCover report; branch coverage 73.28%</p>
-  </article>
-      <article class="metric-card" id="frontend-coverage">
-    <div class="metric-heading"><h3>JavaScript and TypeScript coverage</h3></div>
-    <p class="metric-value">95.55%</p>
-    <p class="metric-definition">JavaScript and TypeScript test coverage measured from the verified first-party LCOV report. The large value is line coverage.</p>
-    <p class="metric-detail">Verified first-party LCOV; branch coverage 84.98%</p>
-  </article>
-    </div>
-  </section>
-    <section aria-labelledby="quality-heading">
-    <div class="section-heading"><div><p class="eyebrow">SonarQube measures</p><h2 id="quality-heading">Quality and security</h2></div></div>
-    <div class="metric-grid">
-      <article class="metric-card" id="security-rating">
-    <div class="metric-heading"><h3>Security rating</h3></div>
-    <p class="metric-value">A · 1.0</p>
-    <p class="metric-definition">Reflects the most severe open vulnerability: a potentially exploitable weakness in the application code.</p>
-    <p class="metric-detail">Sonar scale: lower is better (1 best, 5 worst)</p>
-  </article>
-      <article class="metric-card" id="reliability-rating">
-    <div class="metric-heading"><h3>Reliability rating</h3></div>
-    <p class="metric-value">A · 1.0</p>
-    <p class="metric-definition">Reflects the most severe open bug: a finding that may cause incorrect behavior, crashes, or data loss.</p>
-    <p class="metric-detail">Sonar scale: lower is better (1 best, 5 worst)</p>
-  </article>
-      <article class="metric-card" id="maintainability-rating">
-    <div class="metric-heading"><h3>Maintainability rating</h3></div>
-    <p class="metric-value">A · 1.0</p>
-    <p class="metric-definition">Reflects estimated effort to fix maintainability issues relative to code size; it is not a count of code smells.</p>
-    <p class="metric-detail">Sonar scale: lower is better (1 best, 5 worst)</p>
-  </article>
-      <article class="metric-card" id="vulnerabilities">
-    <div class="metric-heading"><h3>Vulnerabilities</h3></div>
-    <p class="metric-value">0</p>
-    <p class="metric-definition">Open findings that SonarQube identifies as potentially exploitable weaknesses in the application code.</p>
-
-  </article>
-      <article class="metric-card" id="security-hotspots">
-    <div class="metric-heading"><h3>Security hotspots</h3></div>
-    <p class="metric-value">0</p>
-    <p class="metric-definition">Security-sensitive code that requires human review. A hotspot is not automatically a confirmed vulnerability.</p>
-    <p class="metric-detail">100% reviewed</p>
-  </article>
-      <article class="metric-card" id="bugs">
-    <div class="metric-heading"><h3>Bugs</h3></div>
-    <p class="metric-value">0</p>
-    <p class="metric-definition">Open reliability findings that may cause incorrect behavior, crashes, or data corruption.</p>
-
-  </article>
-      <article class="metric-card" id="code-smells">
-    <div class="metric-heading"><h3>Code smells</h3></div>
-    <p class="metric-value">0</p>
-    <p class="metric-definition">Open maintainability findings that make code harder to understand, change, or test but are not necessarily functional defects.</p>
-
-  </article>
-      <article class="metric-card" id="cyclomatic-complexity">
-    <div class="metric-heading"><h3>Average cyclomatic complexity</h3></div>
-    <p class="metric-value">2.36</p>
-    <p class="metric-definition">Average number of linearly independent execution paths per function. Lower values generally mean smaller methods that are easier to test and maintain.</p>
-    <p class="metric-detail">6,612 total across 2,797 functions</p>
-  </article>
-      <article class="metric-card" id="cognitive-complexity">
-    <div class="metric-heading"><h3>Average cognitive complexity</h3></div>
-    <p class="metric-value">1.56</p>
-    <p class="metric-definition">Average score for how difficult each function&#39;s control flow is to understand. Nesting and breaks in linear flow increase the score; lower values are easier to follow and maintain.</p>
-    <p class="metric-detail">4,376 total across 2,797 functions</p>
-  </article>
-      <article class="metric-card" id="duplicated-lines">
-    <div class="metric-heading"><h3>Duplicated lines</h3></div>
-    <p class="metric-value">0%</p>
-    <p class="metric-definition">The percentage of analyzed source lines that SonarQube identifies as duplicated code.</p>
-
-  </article>
-      <article class="metric-card" id="lines-of-code">
-    <div class="metric-heading"><h3>Lines of code</h3></div>
-    <p class="metric-value">31575</p>
-    <p class="metric-definition">The number of analyzed non-comment source lines reported by SonarQube.</p>
-
-  </article>
-    </div>
-  </section>
-    <section aria-labelledby="issue-summary-heading">
-    <div class="section-heading">
-      <div><p class="eyebrow">0 open findings</p><h2 id="issue-summary-heading">Issue distribution</h2></div>
-    </div>
-    <div class="summary-grid">
-      <article><h3>By severity</h3><p class="empty-state">No matching findings.</p></article>
-      <article><h3>By type</h3><p class="empty-state">No matching findings.</p></article>
-      <article><h3>By language</h3><p class="empty-state">No matching findings.</p></article>
-    </div>
-  </section>
-    <section aria-labelledby="hotspots-heading">
-    <div class="section-heading"><div><p class="eyebrow">0 retained hotspots</p><h2 id="hotspots-heading">Security hotspots</h2></div></div>
-    <p class="empty-state">No matching findings.</p>
-    <div class="spacer"></div>
-    <p class="empty-state">No security hotspots were exported.</p>
-  </section>
-    <section aria-labelledby="dependencies-heading">
-    <div class="section-heading"><div><p class="eyebrow">Retained audits</p><h2 id="dependencies-heading">Dependencies and tests</h2></div></div>
-    <div class="evidence-grid">
-      <article class="evidence-panel"><h3>NuGet vulnerabilities</h3>
-    <dl class="count-list">
-      <div><dt>Total</dt><dd>0</dd></div>
-      <div><dt>Critical</dt><dd>0</dd></div>
-      <div><dt>High</dt><dd>0</dd></div>
-      <div><dt>Moderate</dt><dd>0</dd></div>
-      <div><dt>Low</dt><dd>0</dd></div>
-    </dl>
-  </article>
-      <article class="evidence-panel"><h3>npm vulnerabilities</h3>
-    <dl class="count-list">
-      <div><dt>Total</dt><dd>0</dd></div>
-      <div><dt>Critical</dt><dd>0</dd></div>
-      <div><dt>High</dt><dd>0</dd></div>
-      <div><dt>Moderate</dt><dd>0</dd></div>
-      <div><dt>Low</dt><dd>0</dd></div>
-    </dl>
-  </article>
-      <article class="evidence-panel"><h3>.NET tests</h3><dl class="count-list">
-        <div><dt>Total</dt><dd>8</dd></div>
-        <div><dt>Passed</dt><dd>8</dd></div>
-        <div><dt>Failed</dt><dd>0</dd></div>
-        <div><dt>Skipped</dt><dd>0</dd></div>
-      </dl></article>
-      <article class="evidence-panel">
-    <div class="metric-heading"><h3>First-party automated test source</h3></div>
-    <p class="metric-definition">The physical nonblank source lines in explicitly scoped first-party automated tests. It indicates test investment, not a quality score.</p>
-    <dl class="count-list">
-      <div><dt>Nonblank source lines</dt><dd>25,964</dd></div>
-      <div><dt>Test source files</dt><dd>146</dd></div>
-    </dl>
-    <div class="spacer"></div>
-    <div class="table-scroll"><table><thead><tr><th scope="col">Test area</th><th scope="col">Files</th><th scope="col">Nonblank lines</th></tr></thead><tbody><tr><td>.NET test project and harness</td><td>87</td><td>18,017</td></tr><tr><td>Browser unit and boundary tests</td><td>23</td><td>4,455</td></tr><tr><td>End-to-end browser tests and fixtures</td><td>25</td><td>2,751</td></tr><tr><td>Security-report and verification tests</td><td>11</td><td>741</td></tr></tbody></table></div>
-  </article>
-    </div>
-  </section>
-    <section aria-labelledby="issues-heading">
-    <div class="section-heading"><div><p class="eyebrow">Source-level evidence</p><h2 id="issues-heading">Detailed SonarQube issues</h2></div></div>
-    <p class="empty-state">No unresolved SonarQube issues were exported.</p>
-  </section>
-
-    <footer>Generated from a validated rendering of private scan evidence. Raw scanner artifacts are intentionally not published.</footer>
-  </main>
-</body>
+<body><main><article>
+  <p class="eyebrow">Public transparency report</p>
+  <h1>Scan incomplete</h1>
+  <p class="notice">This report is intentionally published when a required scan job did not complete. It must not be interpreted as a passing security result.</p>
+  <dl>
+    <div><dt>Branch</dt><dd><code>main</code></dd></div>
+    <div><dt>Commit</dt><dd><code>7d06563f2eb12376089f3256d1af9d9d20335e6d</code></dd></div>
+    <div><dt>Dependency and analyzer job</dt><dd>success</dd></div>
+    <div><dt>SonarQube job</dt><dd>failure</dd></div>
+    <div><dt>Workflow</dt><dd><a href="https://github.com/d-german/SleepEditWeb/actions/runs/34642267097">View scan run</a></dd></div>
+  </dl>
+  <h2>What happens next</h2>
+  <p>Correct the failing or cancelled scan and push another commit. A complete report replaces this status after both evidence sets are available.</p>
+</article><footer>Raw scanner artifacts are retained privately and are not published.</footer></main></body>
 </html>
